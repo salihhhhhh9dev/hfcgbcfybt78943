@@ -1,0 +1,949 @@
+{% extends "base.html" %}
+
+{% block title %}Настройка календаря лицея — Kalix SaaS{% endblock %}
+
+{% block content %}
+<div class="calendar-config-container">
+  
+  <!-- BREADCRUMB / HEADER -->
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">📅 Предварительная настройка академического календаря</h1>
+      <p class="page-subtitle">Настройте рабочий график по субботам и список исключенных дней перед генерацией расписания.</p>
+    </div>
+    <a href="/schedule" class="btn-secondary-action">← На главную (Расписание)</a>
+  </div>
+
+  <form id="calendarConfigForm" onsubmit="event.preventDefault(); launchScheduleGeneration();">
+    
+    <!-- CARD 0: FLOATING ACADEMIC YEAR & BELLS -->
+    <div class="config-card">
+      <div class="card-header-flex">
+        <div>
+          <h3 class="card-title">1. Параметры учебного года и сетка звонков</h3>
+          <p class="card-desc">Плавающий старт (дни до этой даты автоматически исключаются), дата окончания и структура учебного дня.</p>
+        </div>
+        <span class="badge-info">Адаптивный календарь</span>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-top: 14px;">
+        <div class="form-group">
+          <label class="form-label" for="academicYearStart">Старт учебного года (С...):</label>
+          <input type="date" id="academicYearStart" name="academic_year_start" class="form-control" 
+                 value="{{ settings.academic_year_start.strftime('%Y-%m-%d') if settings and settings.academic_year_start else '2026-09-01' }}" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="academicYearEnd">Окончание уч. года (По...):</label>
+          <input type="date" id="academicYearEnd" name="academic_year_end" class="form-control" 
+                 value="{{ settings.academic_year_end.strftime('%Y-%m-%d') if settings and settings.academic_year_end else '2027-06-30' }}" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="pairsPerDay">Пар в день (по 90 мин):</label>
+          <input type="number" id="pairsPerDay" name="pairs_per_day" class="form-control" min="1" max="5" 
+                 value="{{ settings.pairs_per_day if settings else 3 }}" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="singleLessonsPerDay">Одиночных уроков (45 мин):</label>
+          <input type="number" id="singleLessonsPerDay" name="single_lessons_per_day" class="form-control" min="0" max="3" 
+                 value="{{ settings.single_lessons_per_day if settings else 1 }}" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="reserveDaysCount">Резервные дни в конце года:</label>
+          <input type="number" id="reserveDaysCount" name="reserve_days_count" class="form-control" min="0" max="14" 
+                 value="{{ settings.reserve_days_count if settings else 3 }}" required>
+        </div>
+      </div>
+    </div>
+
+    <!-- CARD 1: SATURDAY WORKDAY CONFIGURATION -->
+    <div class="config-card">
+      <div class="card-header-flex">
+        <div>
+          <h3 class="card-title">2. Режим рабочей недели (Субботы)</h3>
+          <p class="card-desc">Воскресенья <strong>ВСЕГДА</strong> автоматически исключаются системой. Выберите, проводятся ли занятия по субботам.</p>
+        </div>
+        <span class="badge-info">5-дневка / 6-дневка</span>
+      </div>
+
+      <div class="toggle-control-group">
+        <label class="toggle-switch">
+          <input type="checkbox" id="worksOnSaturdays" {% if works_on_saturdays %}checked{% endif %}>
+          <span class="toggle-slider"></span>
+        </label>
+        <div class="toggle-label-wrap">
+          <span class="toggle-title">Шестидневная рабочая неделя (Учимся по субботам)</span>
+          <span class="toggle-subtitle" id="saturdayHelpText">
+            {% if works_on_saturdays %}
+              Включено: Субботы активны (до 2 пар / 4 академических часов). Емкость недели: 39 часов.
+            {% else %}
+              Отключено: Субботы исключены. Пятидневная неделя. Емкость недели: 35 часов (по умолчанию).
+            {% endif %}
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- CARD 2: HOLIDAYS & EXCLUDED DATES -->
+    <div class="config-card">
+      <div class="card-header-flex">
+        <div>
+          <h3 class="card-title">2. Праздничные, нерабочие и карантинные дни</h3>
+          <p class="card-desc">Отметьте государственные праздники и приказы Министерства. Уроки в эти даты планироваться не будут.</p>
+        </div>
+        <span class="badge-holiday" id="holidayCountBadge">Исключено дней: 0</span>
+      </div>
+
+      <!-- PRESET HOLIDAYS CHIPS -->
+      <div class="preset-section">
+        <h4 class="section-subheading">Государственные и академические праздники (Кыргызская Республика):</h4>
+        <div class="preset-chips-grid">
+          {% for p in preset_holidays %}
+            <button type="button" class="preset-chip" data-date="{{ p.date }}" data-reason="{{ p.reason }}" onclick="togglePresetHoliday(this)">
+              <span class="chip-icon">📅</span>
+              <span class="chip-date">{{ p.date }}</span>
+              <span class="chip-title">{{ p.reason }}</span>
+            </button>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- CUSTOM DATE ADDER -->
+      <div class="custom-date-adder">
+        <h4 class="section-subheading">Добавить произвольный день (карантин, приказ, специальный день):</h4>
+        <div class="adder-inputs">
+          <input type="date" id="customDateInput" class="form-control date-picker-input">
+          <input type="text" id="customReasonInput" class="form-control reason-input" placeholder="Причина (например, Карантин или Приказ №14)">
+          <button type="button" class="btn-add-custom-date" onclick="addCustomHoliday()">
+            ➕ Добавить исключение
+          </button>
+        </div>
+      </div>
+
+      <!-- SELECTED HOLIDAYS TABLE -->
+      <div class="table-responsive holidays-table-wrap">
+        <table class="holidays-table">
+          <thead>
+            <tr>
+              <th style="width: 140px;">Дата</th>
+              <th>Причина / Наименование праздника</th>
+              <th style="width: 80px; text-align: center;">Удалить</th>
+            </tr>
+          </thead>
+          <tbody id="holidaysTableBody">
+            <!-- Dynamically rendered -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- CARD 3: BLOCK PRACTICE PERIOD (ПРОИЗВОДСТВЕННОЕ ОБУЧЕНИЕ) -->
+    <div class="config-card" style="border-color: rgba(6, 182, 212, 0.3);">
+      <div class="card-header-flex">
+        <div>
+          <h3 class="card-title">3. Период производственной практики (Блок-практика)</h3>
+          <p class="card-desc">Укажите диапазон дат практики. В этот период обычные предметы приостанавливаются, а расписание полностью заполняется предметом практики.</p>
+        </div>
+        <span class="badge-practice">Производственное обучение</span>
+      </div>
+
+      <div class="practice-config-grid">
+        <div class="form-group">
+          <label class="form-label" for="practiceStartDate">Дата начала практики (С...):</label>
+          <input type="date" id="practiceStartDate" class="form-control date-picker-input" 
+                 value="{% if groups and groups[0].practice_start_date %}{{ groups[0].practice_start_date.strftime('%Y-%m-%d') }}{% endif %}">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="practiceEndDate">Дата окончания практики (По...):</label>
+          <input type="date" id="practiceEndDate" class="form-control date-picker-input"
+                 value="{% if groups and groups[0].practice_end_date %}{{ groups[0].practice_end_date.strftime('%Y-%m-%d') }}{% endif %}">
+        </div>
+
+        <div class="form-group" style="grid-column: 1 / -1;">
+          <label class="form-label" for="practiceSubjectSelect">Предмет практики из учебного плана:</label>
+          <select id="practiceSubjectSelect" class="form-control practice-select">
+            <option value="">-- Автовыбор ("Производственное обучение / Практика") --</option>
+            {% for s in all_subjects %}
+              <option value="{{ s.id }}" {% if groups and groups[0].practice_subject_id == s.id %}selected{% endif %}>
+                {{ s.name }} ({{ s.total_hours }}ч)
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- ACTION FOOTER -->
+    <div class="config-actions-bar">
+      <div class="info-notice">
+        <span>💡 Нажмите «Сохранить параметры календаря» или сразу запустите сквозную генерацию расписания.</span>
+      </div>
+      <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+        <button type="button" class="btn-secondary-action" onclick="saveOnlySettings()">
+          💾 Сохранить параметры
+        </button>
+        <button type="submit" id="btnLaunchGeneration" class="btn-launch-generation">
+          🚀 Сохранить и запустить генерацию
+        </button>
+      </div>
+    </div>
+
+  </form>
+
+  <!-- SECTION 4: PERSONALIZATION (THEME TOGGLE) -->
+  <div class="config-card" style="margin-top: 28px;">
+    <div class="card-header-flex">
+      <div>
+        <h3 class="card-title">4. Персонализация интерфейса</h3>
+        <p class="card-desc">Переключить цветовую схему между темной и светлой темой оформления.</p>
+      </div>
+      <span class="badge-info">Оформление</span>
+    </div>
+
+    <div class="toggle-control-group">
+      <label class="toggle-switch">
+        <input type="checkbox" id="themeToggle" onchange="toggleTheme()">
+        <span class="toggle-slider"></span>
+      </label>
+      <div class="toggle-label-wrap">
+        <span class="toggle-title">Светлая тема интерфейса (Light Mode)</span>
+        <span class="toggle-subtitle">Адаптированный дневной режим повышенной контрастности для печати и светлых помещений</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- SECTION 5: KNOWLEDGE BASE & INSTRUCTIONS -->
+  <div class="config-card">
+    <div class="card-header-flex">
+      <div>
+        <h3 class="card-title">5. Инструкция и База знаний по работе с системой</h3>
+        <p class="card-desc">Регламент завуча по формированию и утверждению расписания профессионального лицея.</p>
+      </div>
+      <span class="badge-info">Справка</span>
+    </div>
+
+    <div class="faq-list">
+      <div class="faq-card open">
+        <div class="faq-header" onclick="toggleFaq(this)">
+          <div class="faq-title">
+            <span class="instruction-badge">Шаг 1</span>
+            Формирование контингента, аудиторного фонда и учебных планов
+          </div>
+          <span class="faq-toggle-icon">▼</span>
+        </div>
+        <div class="faq-body">
+          <p>Для корректного формирования расписания заполните справочники:</p>
+          <ol style="padding-left: 20px; margin: 10px 0;">
+            <li>В разделе <strong>«Преподаватели»</strong> добавьте педагогов вручную или через Excel-шаблон.</li>
+            <li>В разделе <strong>«Кабинеты»</strong> укажите аудитории и компьютерные классы.</li>
+            <li>В разделе <strong>«Группы и часы»</strong> создайте группы и распределите годовой учебный план по предметам с назначением ответственных преподавателей и аудиторий.</li>
+          </ol>
+        </div>
+      </div>
+
+      <div class="faq-card">
+        <div class="faq-header" onclick="toggleFaq(this)">
+          <div class="faq-title">
+            <span class="instruction-badge">Шаг 2</span>
+            Автоматическая генерация и приоритет remaining_hours
+          </div>
+          <span class="faq-toggle-icon">▼</span>
+        </div>
+        <div class="faq-body">
+          <p>При нажатии <code>🚀 Сгенерировать расписание</code> запускается алгоритмический распределитель часов:</p>
+          <ul style="padding-left: 20px; margin: 10px 0;">
+            <li><strong>Плавающий старт</strong>: все дни до указанной даты старта учебного года автоматически исключаются.</li>
+            <li><strong>Сетка звонков</strong>: по умолчанию 3 пары (по 90 мин) + 1 урок (45 мин) в день, большая перемена 20 мин после 2 пары.</li>
+            <li><strong>Разрешение коллизий</strong>: при конкуренции двух групп за одного преподавателя или кабинет, приоритет <strong>строго</strong> отдается дисциплине с наибольшим остатком часов (<code>remaining_hours</code>).</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="faq-card">
+        <div class="faq-header" onclick="toggleFaq(this)">
+          <div class="faq-title">
+            <span class="instruction-badge">Шаг 3</span>
+            Утверждение расписания и экспорт в Excel
+          </div>
+          <span class="faq-toggle-icon">▼</span>
+        </div>
+        <div class="faq-body">
+          <p>В главном рабочем окне <strong>«Расписание на неделю»</strong> выполните аудит сформированных пар, примените фильтры по группам/преподавателям и выгрузите официальную сетку в Excel по кнопке <code>Экспорт в Excel (.xlsx)</code>.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+
+<script>
+// Track selected holidays: Map date -> reason
+let selectedHolidays = new Map();
+
+// Initialize existing DB holidays
+document.addEventListener('DOMContentLoaded', () => {
+  {% for h in holidays %}
+    selectedHolidays.set('{{ h.date.strftime("%Y-%m-%d") }}', '{{ h.reason or "Исключенный день" }}');
+  {% endfor %}
+
+  // Update Saturday toggle help text
+  const satToggle = document.getElementById('worksOnSaturdays');
+  const satHelp = document.getElementById('saturdayHelpText');
+  satToggle.addEventListener('change', () => {
+    if (satToggle.checked) {
+      satHelp.innerHTML = 'Включено: Субботы активны (до 2 пар / 4 академических часов). Емкость недели: 39 часов.';
+    } else {
+      satHelp.innerHTML = 'Отключено: Субботы исключены. Пятидневная неделя. Емкость недели: 35 часов.';
+    }
+  });
+
+  syncPresetChipsState();
+  renderHolidaysTable();
+});
+
+function togglePresetHoliday(btn) {
+  const dStr = btn.getAttribute('data-date');
+  const reason = btn.getAttribute('data-reason');
+
+  if (selectedHolidays.has(dStr)) {
+    selectedHolidays.delete(dStr);
+    btn.classList.remove('active');
+  } else {
+    selectedHolidays.set(dStr, reason);
+    btn.classList.add('active');
+  }
+  renderHolidaysTable();
+}
+
+function addCustomHoliday() {
+  const dateInput = document.getElementById('customDateInput');
+  const reasonInput = document.getElementById('customReasonInput');
+
+  const dVal = dateInput.value;
+  const rVal = reasonInput.value.trim() || 'Приказ / Специальный нерабочий день';
+
+  if (!dVal) {
+    alert('Пожалуйста, выберите дату!');
+    dateInput.focus();
+    return;
+  }
+
+  selectedHolidays.set(dVal, rVal);
+  dateInput.value = '';
+  reasonInput.value = '';
+
+  syncPresetChipsState();
+  renderHolidaysTable();
+}
+
+function removeHoliday(dStr) {
+  selectedHolidays.delete(dStr);
+  syncPresetChipsState();
+  renderHolidaysTable();
+}
+
+function syncPresetChipsState() {
+  document.querySelectorAll('.preset-chip').forEach(btn => {
+    const dStr = btn.getAttribute('data-date');
+    if (selectedHolidays.has(dStr)) {
+      btn.classList.add('active');
+    } else {
+      btn.classList.remove('active');
+    }
+  });
+}
+
+function renderHolidaysTable() {
+  const tbody = document.getElementById('holidaysTableBody');
+  tbody.innerHTML = '';
+
+  document.getElementById('holidayCountBadge').innerText = `Исключено дней: ${selectedHolidays.size}`;
+
+  if (selectedHolidays.size === 0) {
+    tbody.innerHTML = '<tr><td colspan="3" style="text-align: center; color: var(--text-secondary); padding: 24px;">Исключенных праздничных дней пока не выбрано. Используйте кнопки быстрой отметки выше или добавьте дату вручную.</td></tr>';
+    return;
+  }
+
+  // Sort dates chronologically
+  const sortedDates = Array.from(selectedHolidays.keys()).sort();
+
+  sortedDates.forEach(dStr => {
+    const reason = selectedHolidays.get(dStr);
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td style="font-weight: 700; color: #06b6d4;">${dStr}</td>
+      <td>
+        <input type="text" class="form-control table-reason-input" value="${escapeHtml(reason)}" onchange="updateHolidayReason('${dStr}', this.value)">
+      </td>
+      <td style="text-align: center;">
+        <button type="button" class="btn-remove-holiday" onclick="removeHoliday('${dStr}')" title="Удалить день">🗑️</button>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function updateHolidayReason(dStr, newReason) {
+  if (selectedHolidays.has(dStr)) {
+    selectedHolidays.set(dStr, newReason.trim() || 'Исключенный день');
+  }
+}
+
+function launchScheduleGeneration() {
+  const worksOnSats = document.getElementById('worksOnSaturdays').checked;
+  const datesArray = Array.from(selectedHolidays.keys());
+  const reasonsMap = {};
+
+  selectedHolidays.forEach((val, key) => {
+    reasonsMap[key] = val;
+  });
+
+  const practiceStart = document.getElementById('practiceStartDate').value;
+  const practiceEnd = document.getElementById('practiceEndDate').value;
+  const practiceSubjId = document.getElementById('practiceSubjectSelect').value;
+
+  const btn = document.getElementById('btnLaunchGeneration');
+  btn.disabled = true;
+  btn.innerHTML = '⏳ Сохранение настроек и генерация расписания...';
+
+  const startDate = document.getElementById('academicYearStart') ? document.getElementById('academicYearStart').value : '2026-09-15';
+  const endDate = document.getElementById('academicYearEnd') ? document.getElementById('academicYearEnd').value : '2027-05-31';
+  const pairsPerDay = document.getElementById('pairsPerDay') ? parseInt(document.getElementById('pairsPerDay').value) : 3;
+  const singleLessons = document.getElementById('singleLessonsPerDay') ? parseInt(document.getElementById('singleLessonsPerDay').value) : 1;
+  const reserveDays = document.getElementById('reserveDaysCount') ? parseInt(document.getElementById('reserveDaysCount').value) : 3;
+
+  fetch('/api/schedule/generate', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      academic_year_start: startDate,
+      academic_year_end: endDate,
+      pairs_per_day: pairsPerDay,
+      single_lessons_per_day: singleLessons,
+      reserve_days_count: reserveDays,
+      works_on_saturdays: worksOnSats,
+      exception_dates: datesArray,
+      reasons: reasonsMap,
+      practice_start_date: practiceStart,
+      practice_end_date: practiceEnd,
+      practice_subject_id: practiceSubjId
+    })
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (data.success) {
+      alert(data.message);
+      window.location.href = data.redirect || '/schedule';
+    } else {
+      btn.disabled = false;
+      btn.innerHTML = '🚀 Сохранить и запустить генерацию';
+      alert(data.error || 'Ошибка при генерации расписания');
+    }
+  })
+  .catch(err => {
+    btn.disabled = false;
+    btn.innerHTML = '🚀 Сохранить и запустить генерацию';
+    alert('Сетевая ошибка: ' + err.message);
+  });
+}
+
+function saveOnlySettings() {
+  const worksOnSats = document.getElementById('worksOnSaturdays').checked;
+  const datesArray = Array.from(selectedHolidays.keys());
+  const reasonsMap = {};
+  selectedHolidays.forEach((val, key) => { reasonsMap[key] = val; });
+
+  const startDate = document.getElementById('academicYearStart') ? document.getElementById('academicYearStart').value : '2026-09-01';
+  const endDate = document.getElementById('academicYearEnd') ? document.getElementById('academicYearEnd').value : '2027-06-30';
+  const pairsPerDay = document.getElementById('pairsPerDay') ? parseInt(document.getElementById('pairsPerDay').value) : 3;
+  const singleLessons = document.getElementById('singleLessonsPerDay') ? parseInt(document.getElementById('singleLessonsPerDay').value) : 1;
+  const reserveDays = document.getElementById('reserveDaysCount') ? parseInt(document.getElementById('reserveDaysCount').value) : 3;
+
+  fetch('/settings', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      academic_year_start: startDate,
+      academic_year_end: endDate,
+      pairs_per_day: pairsPerDay,
+      single_lessons_per_day: singleLessons,
+      reserve_days_count: reserveDays,
+      works_on_saturdays: worksOnSats,
+      exception_dates: datesArray,
+      reasons: reasonsMap
+    })
+  })
+  .then(res => res.json())
+  .then(data => {
+    alert(data.message || 'Параметры календаря успешно сохранены!');
+  })
+  .catch(err => {
+    alert('Ошибка при сохранении настроек: ' + err.message);
+  });
+}
+
+function toggleTheme() {
+  const isChecked = document.getElementById('themeToggle').checked;
+  if (isChecked) {
+    document.body.classList.add('light-theme');
+    document.documentElement.classList.add('light-theme');
+    localStorage.setItem('theme', 'light');
+  } else {
+    document.body.classList.remove('light-theme');
+    document.documentElement.classList.remove('light-theme');
+    localStorage.setItem('theme', 'dark');
+  }
+}
+
+function toggleFaq(headerElem) {
+  const card = headerElem.parentElement;
+  card.classList.toggle('open');
+}
+
+// Sync theme toggle state on page load
+document.addEventListener('DOMContentLoaded', () => {
+  const isLight = localStorage.getItem('theme') === 'light' || document.body.classList.contains('light-theme');
+  const themeBox = document.getElementById('themeToggle');
+  if (themeBox) themeBox.checked = isLight;
+});
+
+function escapeHtml(text) {
+  return String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+</script>
+{% endblock %}
+
+
+{% block styles %}
+.calendar-config-container {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding-bottom: 40px;
+}
+
+.badge-practice {
+  background: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 12px;
+}
+
+.practice-config-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  background: rgba(15, 15, 25, 0.6);
+  border: 1px solid var(--card-border);
+  border-radius: 14px;
+  padding: 20px;
+}
+
+.practice-select {
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  border-radius: 8px;
+  padding: 10px 14px;
+  color: #ffffff;
+  font-size: 13px;
+  width: 100%;
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 28px;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.page-title {
+  font-size: 22px;
+  font-weight: 800;
+  color: #ffffff;
+}
+
+.page-subtitle {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin-top: 4px;
+}
+
+.btn-secondary-action {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--card-border);
+  color: #ffffff;
+  padding: 10px 18px;
+  border-radius: var(--radius-md);
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 600;
+  transition: var(--transition);
+}
+
+.btn-secondary-action:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.config-card {
+  background: var(--card-bg);
+  backdrop-filter: blur(16px);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-lg);
+  padding: 28px;
+  margin-bottom: 24px;
+}
+
+.card-header-flex {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 20px;
+  gap: 16px;
+}
+
+.card-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.card-desc {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-top: 4px;
+}
+
+.badge-info {
+  background: rgba(139, 92, 246, 0.15);
+  color: #8b5cf6;
+  border: 1px solid rgba(139, 92, 246, 0.3);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 12px;
+}
+
+.badge-holiday {
+  background: rgba(6, 182, 212, 0.15);
+  color: #06b6d4;
+  border: 1px solid rgba(6, 182, 212, 0.3);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 12px;
+}
+
+/* TOGGLE CONTROL */
+.toggle-control-group {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  background: rgba(15, 15, 25, 0.6);
+  border: 1px solid var(--card-border);
+  border-radius: 14px;
+  padding: 20px 24px;
+}
+
+.toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 56px;
+  height: 30px;
+  flex-shrink: 0;
+}
+
+.toggle-switch input { display: none; }
+
+.toggle-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-color: #2d2d3a;
+  transition: .3s;
+  border-radius: 30px;
+}
+
+.toggle-slider:before {
+  position: absolute;
+  content: "";
+  height: 22px;
+  width: 22px;
+  left: 4px;
+  bottom: 4px;
+  background-color: white;
+  transition: .3s;
+  border-radius: 50%;
+}
+
+input:checked + .toggle-slider {
+  background: linear-gradient(135deg, #8b5cf6 0%, #3b82f6 100%);
+  box-shadow: 0 0 12px rgba(139, 92, 246, 0.4);
+}
+
+input:checked + .toggle-slider:before {
+  transform: translateX(26px);
+}
+
+.toggle-label-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.toggle-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.toggle-subtitle {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+/* PRESET CHIPS */
+.section-subheading {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 12px;
+}
+
+.preset-chips-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 10px;
+  margin-bottom: 24px;
+}
+
+.preset-chip {
+  background: rgba(15, 23, 42, 0.8);
+  border: 1px solid var(--card-border);
+  border-radius: 10px;
+  padding: 10px 14px;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.preset-chip:hover {
+  border-color: rgba(139, 92, 246, 0.5);
+  transform: translateY(-1px);
+}
+
+.preset-chip.active {
+  background: rgba(139, 92, 246, 0.15);
+  border-color: #8b5cf6;
+  box-shadow: 0 0 12px rgba(139, 92, 246, 0.2);
+}
+
+.chip-date {
+  font-size: 12px;
+  font-weight: 700;
+  color: #06b6d4;
+}
+
+.chip-title {
+  font-size: 11px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* CUSTOM ADDER */
+.custom-date-adder {
+  margin-bottom: 24px;
+}
+
+.adder-inputs {
+  display: grid;
+  grid-template-columns: 160px 1fr auto;
+  gap: 12px;
+}
+
+@media (max-width: 768px) {
+  .adder-inputs { grid-template-columns: 1fr; }
+}
+
+.date-picker-input, .reason-input {
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  border-radius: 8px;
+  padding: 10px 14px;
+  color: #ffffff;
+  font-size: 13px;
+}
+
+.btn-add-custom-date {
+  background: rgba(139, 92, 246, 0.15);
+  border: 1px solid rgba(139, 92, 246, 0.35);
+  color: #8b5cf6;
+  padding: 10px 18px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+/* HOLIDAYS TABLE */
+.holidays-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.holidays-table th {
+  background: #1a1a24;
+  color: #ffffff;
+  padding: 10px 14px;
+  font-size: 12px;
+  text-align: left;
+  border-bottom: 1px solid #2d2d3a;
+}
+
+.holidays-table td {
+  padding: 10px 14px;
+  border-bottom: 1px solid #2d2d3a;
+  vertical-align: middle;
+}
+
+.table-reason-input {
+  background: #141420;
+  border: 1px solid #2d2d3a;
+  color: #ffffff;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 13px;
+  width: 100%;
+}
+
+.btn-remove-holiday {
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #ef4444;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.config-actions-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-top: 28px;
+}
+
+.info-notice {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.btn-launch-generation {
+  background: linear-gradient(135deg, #8b5cf6 0%, #3b82f6 100%);
+  border: none;
+  color: #ffffff !important;
+  padding: 14px 32px;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 0 24px rgba(139, 92, 246, 0.4);
+  transition: all 0.25s ease;
+}
+
+.btn-launch-generation:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 0 32px rgba(139, 92, 246, 0.6);
+}
+
+/* FAQ & Instructions */
+.faq-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 14px;
+}
+
+.faq-card {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--card-border);
+  border-radius: 12px;
+  overflow: hidden;
+  transition: all 0.2s ease;
+}
+
+.faq-header {
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  background: rgba(255, 255, 255, 0.01);
+  user-select: none;
+}
+
+.faq-header:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.faq-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #e2e8f0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.faq-toggle-icon {
+  font-size: 13px;
+  color: #8b5cf6;
+  transition: transform 0.3s ease;
+}
+
+.faq-card.open .faq-toggle-icon {
+  transform: rotate(180deg);
+}
+
+.faq-body {
+  display: none;
+  padding: 0 20px 20px 20px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: #cbd5e1;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.faq-card.open .faq-body {
+  display: block;
+  padding-top: 16px;
+}
+
+.instruction-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  background: rgba(6, 182, 212, 0.15);
+  color: #06b6d4;
+  border: 1px solid rgba(6, 182, 212, 0.3);
+}
+{% endblock %}
+

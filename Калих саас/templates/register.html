@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Регистрация Лицея — SaaS Генератор</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg-dark: #07090e;
+      --card-bg: rgba(15, 23, 42, 0.8);
+      --card-border: rgba(255, 255, 255, 0.08);
+      --text-primary: #f8fafc;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+      --accent-purple: #8b5cf6;
+      --accent-blue: #3b82f6;
+      --accent-gradient: linear-gradient(135deg, #8b5cf6 0%, #3b82f6 100%);
+      --accent-glow: 0 0 25px rgba(139, 92, 246, 0.4);
+      --error-red: #ff3366;
+      --input-bg: #0f172a;
+      --input-border: #1e293b;
+      --radius-md: 12px;
+      --radius-lg: 20px;
+      --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background-color: var(--bg-dark); color: var(--text-primary);
+      min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px;
+      background-image: 
+        radial-gradient(circle at 15% 15%, rgba(139, 92, 246, 0.12) 0%, transparent 50%),
+        radial-gradient(circle at 85% 85%, rgba(59, 130, 246, 0.12) 0%, transparent 50%);
+    }
+
+    .reg-container { width: 100%; max-width: 480px; }
+
+    .brand-logo { text-align: center; margin-bottom: 28px; }
+    .logo-icon {
+      width: 52px; height: 52px; border-radius: 16px; background: var(--accent-gradient);
+      display: flex; align-items: center; justify-content: center; margin: 0 auto 12px auto;
+      box-shadow: var(--accent-glow);
+    }
+    .logo-icon svg { width: 26px; height: 26px; fill: #ffffff; }
+
+    .reg-card {
+      background: var(--card-bg); backdrop-filter: blur(20px); border: 1px solid var(--card-border);
+      border-radius: var(--radius-lg); padding: 36px; position: relative;
+    }
+    .reg-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: var(--accent-gradient); }
+
+    .flash-alert { padding: 12px; border-radius: var(--radius-md); font-size: 13px; margin-bottom: 16px; }
+    .flash-error { background: rgba(255, 51, 102, 0.15); border: 1px solid var(--error-red); color: #ff668c; }
+
+    .form-group { margin-bottom: 18px; }
+    .form-label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; }
+
+    .form-control {
+      width: 100%; background: var(--input-bg); border: 1px solid var(--input-border);
+      border-radius: var(--radius-md); padding: 12px 16px; color: #fff; font-size: 14px; outline: none;
+    }
+    .form-control:focus { border-color: var(--accent-purple); box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.2); }
+
+    .btn-submit {
+      width: 100%; background: var(--accent-gradient); color: #fff; border: none; padding: 14px;
+      font-size: 15px; font-weight: 600; border-radius: var(--radius-md); cursor: pointer;
+      box-shadow: var(--accent-glow); margin-top: 10px; transition: var(--transition);
+    }
+    .btn-submit:hover { opacity: 0.95; transform: translateY(-1px); }
+
+    .card-footer { margin-top: 20px; text-align: center; font-size: 13px; color: var(--text-secondary); }
+    .card-footer a { color: var(--accent-purple); text-decoration: none; font-weight: 600; }
+  </style>
+</head>
+<body>
+
+  <div class="reg-container">
+    <div class="brand-logo">
+      <div class="logo-icon">
+        <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-2 10h-4v4h-2v-4H7v-2h4V7h2v4h4v2z"/></svg>
+      </div>
+      <h1 style="font-size:22px; font-weight:700;">Регистрация Лицея</h1>
+      <p style="font-size:13px; color:var(--text-secondary);">Создание учётной записи тенанта SaaS</p>
+    </div>
+
+    <div class="reg-card">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          {% for category, message in messages %}
+            <div class="flash-alert flash-{{ category }}">
+              <span>{{ message }}</span>
+            </div>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
+
+      <form method="POST" action="/register">
+        <div class="form-group">
+          <label class="form-label" for="lyceum_name">Название Лицея</label>
+          <input type="text" id="lyceum_name" name="lyceum_name" class="form-control" placeholder="Профессиональный Лицей №1" required autofocus>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="contact_email">Контактный Email лицея</label>
+          <input type="email" id="contact_email" name="contact_email" class="form-control" placeholder="info@lyceum1.edu" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="email">Email администратора</label>
+          <input type="email" id="email" name="email" class="form-control" placeholder="admin@lyceum1.edu" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="password">Пароль</label>
+          <input type="password" id="password" name="password" class="form-control" placeholder="••••••••" required>
+        </div>
+
+        <button type="submit" class="btn-submit">Зарегистрировать Лицей →</button>
+      </form>
+
+      <div class="card-footer">
+        Уже зарегистрированы? <a href="/login">Войти в систему</a>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>

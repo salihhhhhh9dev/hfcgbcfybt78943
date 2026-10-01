@@ -1,0 +1,353 @@
+{% extends 'base.html' %}
+
+{% block title %}Управление Подпиской — KALIX SaaS{% endblock %}
+{% block page_title %}Управление подпиской и тарифами лицея{% endblock %}
+
+{% block content %}
+<div class="tariffs-wrapper">
+  
+  <div class="tariffs-header">
+    <h2>Выберите тарифный план для вашего лицея</h2>
+    <p>Все цены указаны в национальной валюте (сом). Текущий активный план: <span class="highlight-tier">{{ session.get('tier_name', 'Про') }}</span> (Лимит: {{ session.get('group_limit', 15) }} групп)</p>
+  </div>
+
+  <div class="tariffs-grid">
+    
+    <!-- CARD 1: БАЗОВЫЙ -->
+    <div class="tariff-card {% if session.get('tier_name') == 'Базовый' %}current-tier{% endif %}">
+      <div>
+        <div class="tier-header">
+          <h3 class="tier-name">Базовый</h3>
+          <div class="tier-price" id="price_base">2 500 сом <span id="period_base">/ месяц</span></div>
+        </div>
+        <p class="tier-desc">Для небольших профессиональных лицеев и учебных центров</p>
+        
+        <!-- Billing Cycle Selector -->
+        <div class="billing-selector">
+          <label class="billing-option">
+            <input type="radio" name="cycle_base" value="2500 сом / месяц" checked onchange="updatePrice('base', '2 500 сом', '/ месяц')">
+            <span>Месяц — 2 500 сом</span>
+          </label>
+          <label class="billing-option">
+            <input type="radio" name="cycle_base" value="11000 сом / семестр" onchange="updatePrice('base', '11 000 сом', '/ семестр (5 мес.)')">
+            <span>Семестр (5 мес.) — 11 000 сом</span>
+          </label>
+          <label class="billing-option">
+            <input type="radio" name="cycle_base" value="20000 сом / год" onchange="updatePrice('base', '20 000 сом', '/ год')">
+            <span>Год — 20 000 сом</span>
+          </label>
+        </div>
+
+        <ul class="tier-features">
+          <li>✓ До <strong>5 учебных групп</strong></li>
+          <li>✓ 5-дневная рабочая неделя (Пн-Пт)</li>
+          <li>✓ Базовый генератор расписания</li>
+          <li>✓ Разрешение конфликтов по часам</li>
+        </ul>
+      </div>
+
+      <form method="POST" action="/subscriptions">
+        <input type="hidden" name="tier_name" value="Базовый">
+        <input type="hidden" name="group_limit" value="5">
+        <button type="submit" class="btn-select {% if session.get('tier_name') == 'Базовый' %}btn-disabled{% endif %}" {% if session.get('tier_name') == 'Базовый' %}disabled{% endif %}>
+          {% if session.get('tier_name') == 'Базовый' %}Текущий тариф{% else %}Выбрать тариф Базовый{% endif %}
+        </button>
+      </form>
+    </div>
+
+    <!-- CARD 2: ПРО (РЕКОМЕНДУЕМЫЙ) -->
+    <div class="tariff-card featured {% if session.get('tier_name') in ['Про', 'pro'] %}current-tier{% endif %}">
+      <div class="popular-badge">Рекомендуемый</div>
+      <div>
+        <div class="tier-header">
+          <h3 class="tier-name">Про</h3>
+          <div class="tier-price" id="price_pro">5 000 сом <span id="period_pro">/ месяц</span></div>
+        </div>
+        <p class="tier-desc">Оптимальный выбор для большинства профессиональных лицеев</p>
+
+        <!-- Billing Cycle Selector -->
+        <div class="billing-selector">
+          <label class="billing-option">
+            <input type="radio" name="cycle_pro" value="5000 сом / месяц" checked onchange="updatePrice('pro', '5 000 сом', '/ месяц')">
+            <span>Месяц — 5 000 сом</span>
+          </label>
+          <label class="billing-option">
+            <input type="radio" name="cycle_pro" value="22000 сом / семестр" onchange="updatePrice('pro', '22 000 сом', '/ семестр (5 мес.)')">
+            <span>Семестр (5 мес.) — 22 000 сом</span>
+          </label>
+          <label class="billing-option">
+            <input type="radio" name="cycle_pro" value="40000 сом / год" onchange="updatePrice('pro', '40 000 сом', '/ год')">
+            <span>Год — 40 000 сом</span>
+          </label>
+        </div>
+
+        <ul class="tier-features">
+          <li>✓ До <strong>15 учебных групп</strong></li>
+          <li>✓ 5-дневная или 6-дневная неделя</li>
+          <li>✓ Полный учет календаря и праздников</li>
+          <li>✓ Приоритет разрешения по remaining_hours</li>
+          <li>✓ Экспорт расписания в Excel (.xlsx)</li>
+        </ul>
+      </div>
+
+      <form method="POST" action="/subscriptions">
+        <input type="hidden" name="tier_name" value="Про">
+        <input type="hidden" name="group_limit" value="15">
+        <button type="submit" class="btn-select btn-featured {% if session.get('tier_name') in ['Про', 'pro'] %}btn-disabled{% endif %}" {% if session.get('tier_name') in ['Про', 'pro'] %}disabled{% endif %}>
+          {% if session.get('tier_name') in ['Про', 'pro'] %}Текущий тариф{% else %}Выбрать тариф Про{% endif %}
+        </button>
+      </form>
+    </div>
+
+    <!-- CARD 3: КОРПОРАТИВНЫЙ -->
+    <div class="tariff-card {% if session.get('tier_name') == 'Корпоративный' %}current-tier{% endif %}">
+      <div>
+        <div class="tier-header">
+          <h3 class="tier-name">Корпоративный</h3>
+          <div class="tier-price" id="price_corp">9 000 сом <span id="period_corp">/ месяц</span></div>
+        </div>
+        <p class="tier-desc">Максимальные возможности для крупных колледжей и образовательных комплексов</p>
+
+        <!-- Billing Cycle Selector -->
+        <div class="billing-selector">
+          <label class="billing-option">
+            <input type="radio" name="cycle_corp" value="9000 сом / месяц" checked onchange="updatePrice('corp', '9 000 сом', '/ месяц')">
+            <span>Месяц — 9 000 сом</span>
+          </label>
+          <label class="billing-option">
+            <input type="radio" name="cycle_corp" value="40000 сом / семестр" onchange="updatePrice('corp', '40 000 сом', '/ семестр (5 мес.)')">
+            <span>Семестр (5 мес.) — 40 000 сом</span>
+          </label>
+          <label class="billing-option">
+            <input type="radio" name="cycle_corp" value="75000 сом / год" onchange="updatePrice('corp', '75 000 сом', '/ год')">
+            <span>Год — 75 000 сом</span>
+          </label>
+        </div>
+
+        <ul class="tier-features">
+          <li>✓ <strong>До 100 учебных групп</strong> (Без ограничений)</li>
+          <li>✓ Мульти-корпусный режим и лаборатории</li>
+          <li>✓ Индивидуальная настройка звонков</li>
+          <li>✓ Персональный менеджер и техподдержка 24/7</li>
+        </ul>
+      </div>
+
+      <form method="POST" action="/subscriptions">
+        <input type="hidden" name="tier_name" value="Корпоративный">
+        <input type="hidden" name="group_limit" value="100">
+        <button type="submit" class="btn-select {% if session.get('tier_name') == 'Корпоративный' %}btn-disabled{% endif %}" {% if session.get('tier_name') == 'Корпоративный' %}disabled{% endif %}>
+          {% if session.get('tier_name') == 'Корпоративный' %}Текущий тариф{% else %}Выбрать Корпоративный{% endif %}
+        </button>
+      </form>
+    </div>
+
+  </div>
+
+</div>
+{% endblock %}
+
+{% block styles %}
+.tariffs-wrapper {
+  max-width: 1140px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.tariffs-header {
+  text-align: center;
+  margin-bottom: 36px;
+}
+
+.tariffs-header h2 {
+  font-size: 26px;
+  font-weight: 800;
+  color: #ffffff;
+  margin-bottom: 8px;
+}
+
+.tariffs-header p {
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+.highlight-tier {
+  color: var(--accent-cyan);
+  font-weight: 700;
+}
+
+.tariffs-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+  align-items: stretch;
+}
+
+@media (max-width: 980px) {
+  .tariffs-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.tariff-card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-lg);
+  padding: 32px 24px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  position: relative;
+  transition: var(--transition);
+}
+
+.tariff-card:hover {
+  transform: translateY(-4px);
+  border-color: var(--accent-purple);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4);
+}
+
+.tariff-card.featured {
+  border-color: var(--accent-purple);
+  background: linear-gradient(180deg, rgba(139, 92, 246, 0.08) 0%, rgba(15, 23, 42, 0.8) 100%);
+  box-shadow: 0 0 25px rgba(139, 92, 246, 0.15);
+}
+
+.tariff-card.current-tier {
+  border-color: var(--accent-cyan);
+  box-shadow: 0 0 20px rgba(6, 182, 212, 0.2);
+}
+
+.popular-badge {
+  position: absolute;
+  top: -12px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--accent-gradient);
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 4px 14px;
+  border-radius: 20px;
+  box-shadow: var(--accent-glow);
+}
+
+.tier-header {
+  margin-bottom: 12px;
+}
+
+.tier-name {
+  font-size: 22px;
+  font-weight: 800;
+  color: #ffffff;
+}
+
+.tier-price {
+  font-size: 28px;
+  font-weight: 800;
+  color: #ffffff;
+  margin-top: 8px;
+}
+
+.tier-price span {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.tier-desc {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-bottom: 20px;
+  line-height: 1.4;
+}
+
+.billing-selector {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 24px;
+  background: rgba(15, 23, 42, 0.6);
+  padding: 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--card-border);
+}
+
+.billing-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.billing-option input[type="radio"] {
+  accent-color: var(--accent-purple);
+}
+
+.tier-features {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 28px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.tier-features li {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+.tier-features li strong {
+  color: #ffffff;
+}
+
+.btn-select {
+  width: 100%;
+  padding: 12px 18px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--card-border);
+  background: rgba(255, 255, 255, 0.05);
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.btn-select:hover:not(.btn-disabled) {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: #ffffff;
+}
+
+.btn-featured {
+  background: var(--accent-gradient);
+  border: none;
+  box-shadow: var(--accent-glow);
+}
+
+.btn-featured:hover:not(.btn-disabled) {
+  filter: brightness(1.1);
+  box-shadow: 0 0 30px rgba(139, 92, 246, 0.6);
+}
+
+.btn-disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  border-color: var(--accent-cyan);
+  color: var(--accent-cyan);
+  background: rgba(6, 182, 212, 0.1);
+}
+{% endblock %}
+
+{% block scripts %}
+<script>
+  function updatePrice(tier, price, period) {
+    document.getElementById(`price_${tier}`).innerHTML = `${price} <span>${period}</span>`;
+  }
+</script>
+{% endblock %}

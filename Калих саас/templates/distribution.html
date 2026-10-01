@@ -1,0 +1,413 @@
+{% extends 'base.html' %}
+
+{% block title %}Распределение часов по семестрам — KALIX SaaS{% endblock %}
+{% block page_title %}Распределение учебной нагрузки (Curriculum Mapper){% endblock %}
+
+{% block content %}
+<div class="distribution-wrapper">
+  
+  <!-- BACK NAVIGATION & SUBJECT SUMMARY CARD -->
+  <div class="summary-card">
+    <div class="summary-header">
+      <div>
+        <a href="/groups/{{ group.id }}" class="back-link">← Вернуться к группе {{ group.group_number }}</a>
+        <h2 class="subject-title">{{ subject.name }}</h2>
+        <div class="subject-subtitle">
+          Группа {{ group.group_number }} ({{ group.years_of_study }} {% if group.years_of_study == 1 %}год{% elif group.years_of_study < 5 %}года{% else %}лет{% endif %} обучения / {{ num_semesters }} семестров)
+        </div>
+      </div>
+      
+      <div class="total-hours-badge">
+        <div class="badge-label">Всего по предмету</div>
+        <div class="badge-value" id="totalHoursVal">{{ subject.total_hours }} ч.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- REMAINING HOURS COUNTER BANNER -->
+  <div class="counter-banner" id="counterBanner">
+    <div class="counter-info">
+      <div class="counter-label">Остаток часов для распределения</div>
+      <div class="counter-value" id="remainingHoursVal">{{ subject.total_hours }} ч.</div>
+    </div>
+    <div class="counter-status" id="counterStatusText">
+      ⚠️ Заполните часы по семестрам
+    </div>
+  </div>
+
+  <!-- SMART SLIDERS FORM CARD -->
+  <div class="card distribution-card">
+    <div class="card-header">
+      <h3 class="card-title">Распределение по семестрам</h3>
+      <p class="card-subtitle">Перетаскивайте ползунки или вводите числа вручную. Сумма должна точно равняться {{ subject.total_hours }} ч.</p>
+    </div>
+
+    <form id="distributionForm" onsubmit="submitDistribution(event)">
+      <div class="semesters-grid" id="semestersContainer">
+        
+        {% for s_num in range(1, num_semesters + 1) %}
+          {% set default_val = (subject.semester_distribution or {}).get(s_num|string, 0) %}
+          <div class="semester-row" data-semester="{{ s_num }}">
+            <div class="semester-meta">
+              <span class="semester-num">{{ s_num }} семестр</span>
+              <span class="semester-percent" id="percent_s{{ s_num }}">0%</span>
+            </div>
+
+            <div class="control-pair">
+              <input 
+                type="range" 
+                class="slider-input" 
+                id="slider_s{{ s_num }}" 
+                min="0" 
+                max="{{ subject.total_hours }}" 
+                step="5" 
+                value="{{ default_val }}"
+                oninput="syncFromSlider({{ s_num }})"
+              >
+              
+              <div class="number-input-wrap">
+                <input 
+                  type="number" 
+                  class="number-input" 
+                  id="num_s{{ s_num }}" 
+                  min="0" 
+                  max="{{ subject.total_hours }}" 
+                  step="1" 
+                  value="{{ default_val }}"
+                  oninput="syncFromNumber({{ s_num }})"
+                >
+                <span class="unit-tag">ч.</span>
+              </div>
+            </div>
+          </div>
+        {% endfor %}
+
+      </div>
+
+      <div class="form-actions">
+        <a href="/groups/{{ group.id }}" class="btn-cancel">Отмена</a>
+        <button type="submit" id="saveBtn" class="btn-save" disabled>
+          Сохранить распределение →
+        </button>
+      </div>
+    </form>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block styles %}
+.distribution-wrapper {
+  max-width: 920px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.back-link {
+  color: var(--text-secondary);
+  font-size: 13px;
+  text-decoration: none;
+  font-weight: 500;
+  display: inline-block;
+  margin-bottom: 8px;
+  transition: var(--transition);
+}
+.back-link:hover { color: var(--accent-purple); }
+
+.summary-card {
+  background: var(--card-bg);
+  backdrop-filter: blur(16px);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-lg);
+  padding: 26px 30px;
+  margin-bottom: 20px;
+}
+
+.summary-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.subject-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.subject-subtitle {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-top: 4px;
+}
+
+.total-hours-badge {
+  background: rgba(15, 23, 42, 0.9);
+  border: 1px solid var(--card-border);
+  padding: 10px 20px;
+  border-radius: var(--radius-md);
+  text-align: right;
+}
+
+.badge-label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; }
+.badge-value { font-size: 20px; font-weight: 700; color: var(--accent-cyan); margin-top: 2px; }
+
+/* REMAINING COUNTER BANNER */
+.counter-banner {
+  padding: 18px 26px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--card-border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  transition: var(--transition);
+}
+
+.counter-banner.state-warning {
+  background: rgba(245, 158, 11, 0.12);
+  border-color: rgba(245, 158, 11, 0.4);
+  color: #fbbf24;
+}
+
+.counter-banner.state-error {
+  background: rgba(255, 51, 102, 0.15);
+  border-color: var(--error-red);
+  color: #ff668c;
+  box-shadow: var(--error-glow);
+}
+
+.counter-banner.state-success {
+  background: rgba(16, 185, 129, 0.15);
+  border-color: var(--success-green);
+  color: #34d399;
+  box-shadow: 0 0 20px rgba(16, 185, 129, 0.3);
+}
+
+.counter-label { font-size: 12px; opacity: 0.9; text-transform: uppercase; letter-spacing: 0.04em; }
+.counter-value { font-size: 26px; font-weight: 800; line-height: 1.1; margin-top: 2px; }
+.counter-status { font-size: 14px; font-weight: 600; }
+
+/* SLIDERS GRID */
+.card {
+  background: var(--card-bg);
+  backdrop-filter: blur(16px);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-lg);
+  padding: 30px;
+}
+
+.card-title { font-size: 18px; font-weight: 700; color: #ffffff; }
+.card-subtitle { font-size: 13px; color: var(--text-secondary); margin-top: 4px; margin-bottom: 28px; }
+
+.semesters-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  margin-bottom: 32px;
+}
+
+.semester-row {
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-md);
+  padding: 16px 20px;
+  transition: var(--transition);
+}
+
+.semester-row:hover {
+  border-color: var(--card-hover-border);
+}
+
+.semester-meta {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.semester-num { font-size: 14px; font-weight: 700; color: #ffffff; }
+.semester-percent { font-size: 12px; font-weight: 600; color: var(--text-muted); }
+
+.control-pair {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.slider-input {
+  flex: 1;
+  height: 6px;
+  border-radius: 3px;
+  background: #1e293b;
+  outline: none;
+  accent-color: var(--accent-purple);
+  cursor: pointer;
+}
+
+.number-input-wrap {
+  display: flex;
+  align-items: center;
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  border-radius: var(--radius-md);
+  padding: 4px 10px;
+  width: 110px;
+}
+
+.number-input {
+  width: 100%;
+  background: transparent;
+  border: none;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 700;
+  outline: none;
+  text-align: right;
+}
+
+.unit-tag { font-size: 12px; color: var(--text-muted); margin-left: 4px; }
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--card-border);
+}
+
+.btn-cancel {
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 12px 20px;
+  border-radius: var(--radius-md);
+  transition: var(--transition);
+}
+.btn-cancel:hover { color: #ffffff; background: rgba(255, 255, 255, 0.05); }
+
+.btn-save {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--card-border);
+  color: var(--text-muted);
+  padding: 12px 28px;
+  font-size: 14px;
+  font-weight: 700;
+  border-radius: var(--radius-md);
+  cursor: not-allowed;
+  opacity: 0.4;
+  transition: var(--transition);
+}
+
+.btn-save.active-save {
+  background: var(--accent-gradient);
+  border: none;
+  color: #ffffff;
+  cursor: pointer;
+  opacity: 1;
+  box-shadow: var(--accent-glow);
+}
+
+.btn-save.active-save:hover {
+  transform: translateY(-1px);
+  opacity: 0.95;
+}
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const TOTAL_HOURS = {{ subject.total_hours }};
+  const NUM_SEMESTERS = {{ num_semesters }};
+  const SUBJECT_ID = {{ subject.id }};
+  const GROUP_ID = {{ group.id }};
+
+  function syncFromSlider(semesterNum) {
+    const slider = document.getElementById(`slider_s${semesterNum}`);
+    const numInput = document.getElementById(`num_s${semesterNum}`);
+    numInput.value = slider.value;
+    recalculateDistribution();
+  }
+
+  function syncFromNumber(semesterNum) {
+    const slider = document.getElementById(`slider_s${semesterNum}`);
+    const numInput = document.getElementById(`num_s${semesterNum}`);
+    let val = parseInt(numInput.value) || 0;
+    if (val < 0) val = 0;
+    if (val > TOTAL_HOURS) val = TOTAL_HOURS;
+    slider.value = val;
+    recalculateDistribution();
+  }
+
+  function recalculateDistribution() {
+    let currentSum = 0;
+
+    for (let i = 1; i <= NUM_SEMESTERS; i++) {
+      const val = parseInt(document.getElementById(`num_s${i}`).value) || 0;
+      currentSum += val;
+
+      const pct = TOTAL_HOURS > 0 ? ((val / TOTAL_HOURS) * 100).toFixed(1) : 0;
+      document.getElementById(`percent_s${i}`).innerText = `${pct}%`;
+    }
+
+    const remaining = TOTAL_HOURS - currentSum;
+    const banner = document.getElementById('counterBanner');
+    const remainingValElem = document.getElementById('remainingHoursVal');
+    const statusTextElem = document.getElementById('counterStatusText');
+    const saveBtn = document.getElementById('saveBtn');
+
+    remainingValElem.innerText = `${remaining} ч.`;
+
+    banner.classList.remove('state-warning', 'state-error', 'state-success');
+
+    if (remaining > 0) {
+      banner.classList.add('state-warning');
+      statusTextElem.innerText = `⚠️ Осталось распределить: ${remaining} ч.`;
+      saveBtn.disabled = true;
+      saveBtn.classList.remove('active-save');
+    } else if (remaining < 0) {
+      banner.classList.add('state-error');
+      statusTextElem.innerText = `⛔ Превышение на ${Math.abs(remaining)} ч.! Уменьшите часы.`;
+      saveBtn.disabled = true;
+      saveBtn.classList.remove('active-save');
+    } else {
+      banner.classList.add('state-success');
+      statusTextElem.innerText = `✓ Все ${TOTAL_HOURS} ч. распределены идеально!`;
+      saveBtn.disabled = false;
+      saveBtn.classList.add('active-save');
+    }
+  }
+
+  async function submitDistribution(e) {
+    e.preventDefault();
+    
+    const distribution = {};
+    for (let i = 1; i <= NUM_SEMESTERS; i++) {
+      distribution[i.toString()] = parseInt(document.getElementById(`num_s${i}`).value) || 0;
+    }
+
+    try {
+      const response = await fetch(`/api/subjects/${SUBJECT_ID}/distribute`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ distribution })
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        alert(result.message || "Распределение успешно сохранено!");
+        window.location.href = `/groups/${GROUP_ID}`;
+      } else {
+        alert("Ошибка: " + (result.error || "Не удалось сохранить данные."));
+      }
+    } catch (err) {
+      alert("Ошибка соединения с сервером: " + err.message);
+    }
+  }
+
+  window.addEventListener('DOMContentLoaded', recalculateDistribution);
+</script>
+{% endblock %}

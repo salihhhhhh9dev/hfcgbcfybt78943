@@ -1,0 +1,748 @@
+{% extends 'base.html' %}
+
+{% block title %}Годовая Матрица — Инспекция Алгоритма — KALIX SaaS{% endblock %}
+{% block page_title %}Аудит и инспекция годового алгоритма расписания{% endblock %}
+
+{% block content %}
+<div class="yearly-audit-wrapper">
+
+  <!-- TOP TOOLBAR & AUDIT HEADER -->
+  <div class="audit-toolbar">
+    <div class="toolbar-left">
+      <div class="audit-status-badge">
+        <span class="pulse-green"></span>
+        <span>Режим инспекции алгоритма (72ч аудит)</span>
+      </div>
+      <div class="view-toggle">
+        <a href="/dashboard" class="toggle-btn">📅 Недельный вид</a>
+        <a href="/schedule/yearly" class="toggle-btn active">🌐 Годовая матрица</a>
+      </div>
+    </div>
+
+    <div class="toolbar-right">
+      <button class="btn-expand-all" onclick="toggleAllAccordions()">
+        <span id="expandAllIcon">▼</span> Развернуть все группы
+      </button>
+      <a href="/export/excel" class="btn-excel">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Экспорт в Excel (.xlsx)
+      </a>
+    </div>
+  </div>
+
+  <!-- STICKY & ACCORDION DATA TABLE CONTAINER -->
+  <div class="table-container">
+    <table class="audit-matrix-table" id="auditTable">
+      <thead>
+        <tr class="header-months-row">
+          <!-- Sticky Top-Left Corner -->
+          <th class="sticky-top-left">Группа / Учебная дисциплина</th>
+          <th class="month-col">Сентябрь</th>
+          <th class="month-col">Октябрь</th>
+          <th class="month-col">Ноябрь</th>
+          <th class="month-col">Декабрь</th>
+          <th class="month-col">Январь</th>
+          <th class="month-col">Февраль</th>
+          <th class="month-col">Март</th>
+          <th class="month-col">Апрель</th>
+          <th class="month-col">Май</th>
+          <th class="month-col">Июнь</th>
+          <!-- Sticky Top-Right "Proof" Column -->
+          <th class="sticky-top-right">Итого за год</th>
+        </tr>
+      </thead>
+      <tbody>
+
+        <!-- ==========================================
+             GROUP 1: ИТ-21 (ACCORDION PARENT 1)
+             ========================================== -->
+        <tr class="group-parent-row" onclick="toggleGroupAccordion('group_it21', this)">
+          <td class="sticky-col group-name-td">
+            <div class="group-toggle-title">
+              <span class="toggle-arrow">▼</span>
+              <span class="group-badge">ИТ-21</span>
+              <span class="group-label-text">Информационные технологии (2 курс • 25 студ.)</span>
+            </div>
+          </td>
+          <td class="group-month-summary">300 ч.</td>
+          <td class="group-month-summary">320 ч.</td>
+          <td class="group-month-summary">300 ч.</td>
+          <td class="group-month-summary">280 ч.</td>
+          <td class="group-month-summary">300 ч.</td>
+          <td class="group-month-summary">300 ч.</td>
+          <td class="group-month-summary">320 ч.</td>
+          <td class="group-month-summary">300 ч.</td>
+          <td class="group-month-summary">300 ч.</td>
+          <td class="group-month-summary">280 ч.</td>
+          <td class="sticky-proof group-proof-summary">3 000 / 3 000 ч. ✓</td>
+        </tr>
+
+        <!-- Child Row 1.1 -->
+        <tr class="child-subject-row group_it21">
+          <td class="sticky-col subject-name-td">
+            <div class="subject-title-box">
+              <span class="subj-name">Основы программирования</span>
+              <span class="subj-code">План: 120 ч.</span>
+            </div>
+          </td>
+          <td class="cell-data">Иванов (24 ч.)</td>
+          <td class="cell-data">Иванов (24 ч.)</td>
+          <td class="cell-data">Иванов (24 ч.)</td>
+          <td class="cell-data">Иванов (24 ч.)</td>
+          <td class="cell-data">Иванов (24 ч.)</td>
+          <td class="cell-empty">—</td>
+          <td class="cell-empty">—</td>
+          <td class="cell-empty">—</td>
+          <td class="cell-empty">—</td>
+          <td class="cell-empty">—</td>
+          <td class="sticky-proof proof-ok">120 / 120 ч. ✓</td>
+        </tr>
+
+        <!-- Child Row 1.2 -->
+        <tr class="child-subject-row group_it21">
+          <td class="sticky-col subject-name-td">
+            <div class="subject-title-box">
+              <span class="subj-name">Основы web дизайна</span>
+              <span class="subj-code">План: 60 ч.</span>
+            </div>
+          </td>
+          <td class="cell-data">Смирнов (12 ч.)</td>
+          <td class="cell-data">Смирнов (12 ч.)</td>
+          <td class="cell-data">Смирнов (12 ч.)</td>
+          <td class="cell-data">Смирнов (12 ч.)</td>
+          <td class="cell-data">Смирнов (12 ч.)</td>
+          <td class="cell-empty">—</td>
+          <td class="cell-empty">—</td>
+          <td class="cell-empty">—</td>
+          <td class="cell-empty">—</td>
+          <td class="cell-empty">—</td>
+          <td class="sticky-proof proof-ok">60 / 60 ч. ✓</td>
+        </tr>
+
+        <!-- Child Row 1.3 -->
+        <tr class="child-subject-row group_it21">
+          <td class="sticky-col subject-name-td">
+            <div class="subject-title-box">
+              <span class="subj-name">Технология программирования</span>
+              <span class="subj-code">План: 80 ч.</span>
+            </div>
+          </td>
+          <td class="cell-empty">—</td>
+          <td class="cell-empty">—</td>
+          <td class="cell-empty">—</td>
+          <td class="cell-empty">—</td>
+          <td class="cell-empty">—</td>
+          <td class="cell-data">Смирнов (16 ч.)</td>
+          <td class="cell-data">Смирнов (16 ч.)</td>
+          <td class="cell-data">Смирнов (16 ч.)</td>
+          <td class="cell-data">Смирнов (16 ч.)</td>
+          <td class="cell-data">Смирнов (16 ч.)</td>
+          <td class="sticky-proof proof-ok">80 / 80 ч. ✓</td>
+        </tr>
+
+        <!-- Child Row 1.4 -->
+        <tr class="child-subject-row group_it21">
+          <td class="sticky-col subject-name-td">
+            <div class="subject-title-box">
+              <span class="subj-name">Алгебра & Геометрия</span>
+              <span class="subj-code">План: 272 ч.</span>
+            </div>
+          </td>
+          <td class="cell-data">Петрова (30 ч.)</td>
+          <td class="cell-data">Петрова (30 ч.)</td>
+          <td class="cell-data">Петрова (28 ч.)</td>
+          <td class="cell-data">Петрова (26 ч.)</td>
+          <td class="cell-data">Петрова (28 ч.)</td>
+          <td class="cell-data">Петрова (30 ч.)</td>
+          <td class="cell-data">Петрова (30 ч.)</td>
+          <td class="cell-data">Петрова (30 ч.)</td>
+          <td class="cell-data">Петрова (30 ч.)</td>
+          <td class="cell-data">Петрова (30 ч.)</td>
+          <td class="sticky-proof proof-ok">272 / 272 ч. ✓</td>
+        </tr>
+
+        <!-- Child Row 1.5 -->
+        <tr class="child-subject-row group_it21">
+          <td class="sticky-col subject-name-td">
+            <div class="subject-title-box">
+              <span class="subj-name">Производственная практика</span>
+              <span class="subj-code">План: 724 ч.</span>
+            </div>
+          </td>
+          <td class="cell-empty">—</td>
+          <td class="cell-empty">—</td>
+          <td class="cell-empty">—</td>
+          <td class="cell-empty">—</td>
+          <td class="cell-empty">—</td>
+          <td class="cell-data practice-cell">Практика (180ч)</td>
+          <td class="cell-data practice-cell">Практика (180ч)</td>
+          <td class="cell-data practice-cell">Практика (180ч)</td>
+          <td class="cell-data practice-cell">Практика (184ч)</td>
+          <td class="cell-empty">—</td>
+          <td class="sticky-proof proof-ok">724 / 724 ч. ✓</td>
+        </tr>
+
+
+        <!-- ==========================================
+             GROUP 2: ПР-22 (ACCORDION PARENT 2)
+             ========================================== -->
+        <tr class="group-parent-row" onclick="toggleGroupAccordion('group_pr22', this)">
+          <td class="sticky-col group-name-td">
+            <div class="group-toggle-title">
+              <span class="toggle-arrow">▼</span>
+              <span class="group-badge badge-cyan">ПР-22</span>
+              <span class="group-label-text">Программная инженерия (1 курс • 20 студ.)</span>
+            </div>
+          </td>
+          <td class="group-month-summary">180 ч.</td>
+          <td class="group-month-summary">180 ч.</td>
+          <td class="group-month-summary">180 ч.</td>
+          <td class="group-month-summary">180 ч.</td>
+          <td class="group-month-summary">180 ч.</td>
+          <td class="group-month-summary">180 ч.</td>
+          <td class="group-month-summary">180 ч.</td>
+          <td class="group-month-summary">180 ч.</td>
+          <td class="group-month-summary">180 ч.</td>
+          <td class="group-month-summary">180 ч.</td>
+          <td class="sticky-proof group-proof-summary">1 800 / 1 800 ч. ✓</td>
+        </tr>
+
+        <!-- Child Row 2.1 -->
+        <tr class="child-subject-row group_pr22">
+          <td class="sticky-col subject-name-td">
+            <div class="subject-title-box">
+              <span class="subj-name">Алгоритмы & Структуры данных</span>
+              <span class="subj-code">План: 240 ч.</span>
+            </div>
+          </td>
+          <td class="cell-data">Иванов (24 ч.)</td>
+          <td class="cell-data">Иванов (24 ч.)</td>
+          <td class="cell-data">Иванов (24 ч.)</td>
+          <td class="cell-data">Иванов (24 ч.)</td>
+          <td class="cell-data">Иванов (24 ч.)</td>
+          <td class="cell-data">Иванов (24 ч.)</td>
+          <td class="cell-data">Иванов (24 ч.)</td>
+          <td class="cell-data">Иванов (24 ч.)</td>
+          <td class="cell-data">Иванов (24 ч.)</td>
+          <td class="cell-data">Иванов (24 ч.)</td>
+          <td class="sticky-proof proof-ok">240 / 240 ч. ✓</td>
+        </tr>
+
+        <!-- Child Row 2.2 -->
+        <tr class="child-subject-row group_pr22">
+          <td class="sticky-col subject-name-td">
+            <div class="subject-title-box">
+              <span class="subj-name">Основы Web Дизайна & Frontend</span>
+              <span class="subj-code">План: 180 ч.</span>
+            </div>
+          </td>
+          <td class="cell-data">Смирнов (18 ч.)</td>
+          <td class="cell-data">Смирнов (18 ч.)</td>
+          <td class="cell-data">Смирнов (18 ч.)</td>
+          <td class="cell-data">Смирнов (18 ч.)</td>
+          <td class="cell-data">Смирнов (18 ч.)</td>
+          <td class="cell-data">Смирнов (18 ч.)</td>
+          <td class="cell-data">Смирнов (18 ч.)</td>
+          <td class="cell-data">Смирнов (18 ч.)</td>
+          <td class="cell-data">Смирнов (18 ч.)</td>
+          <td class="cell-data">Смирнов (18 ч.)</td>
+          <td class="sticky-proof proof-ok">180 / 180 ч. ✓</td>
+        </tr>
+
+        <!-- Child Row 2.3 -->
+        <tr class="child-subject-row group_pr22">
+          <td class="sticky-col subject-name-td">
+            <div class="subject-title-box">
+              <span class="subj-name">Общеобразовательный блок</span>
+              <span class="subj-code">План: 1380 ч.</span>
+            </div>
+          </td>
+          <td class="cell-data">Педагоги ОД (138ч)</td>
+          <td class="cell-data">Педагоги ОД (138ч)</td>
+          <td class="cell-data">Педагоги ОД (138ч)</td>
+          <td class="cell-data">Педагоги ОД (138ч)</td>
+          <td class="cell-data">Педагоги ОД (138ч)</td>
+          <td class="cell-data">Педагоги ОД (138ч)</td>
+          <td class="cell-data">Педагоги ОД (138ч)</td>
+          <td class="cell-data">Педагоги ОД (138ч)</td>
+          <td class="cell-data">Педагоги ОД (138ч)</td>
+          <td class="cell-data">Педагоги ОД (138ч)</td>
+          <td class="sticky-proof proof-ok">1380 / 1380 ч. ✓</td>
+        </tr>
+
+
+        <!-- ==========================================
+             GROUP 3: ДЗ-23 (ACCORDION PARENT 3)
+             ========================================== -->
+        <tr class="group-parent-row" onclick="toggleGroupAccordion('group_dz23', this)">
+          <td class="sticky-col group-name-td">
+            <div class="group-toggle-title">
+              <span class="toggle-arrow">▼</span>
+              <span class="group-badge badge-emerald">ДЗ-23</span>
+              <span class="group-label-text">Графический дизайн (3 курс • 18 студ.)</span>
+            </div>
+          </td>
+          <td class="group-month-summary">240 ч.</td>
+          <td class="group-month-summary">240 ч.</td>
+          <td class="group-month-summary">240 ч.</td>
+          <td class="group-month-summary">240 ч.</td>
+          <td class="group-month-summary">240 ч.</td>
+          <td class="group-month-summary">240 ч.</td>
+          <td class="group-month-summary">240 ч.</td>
+          <td class="group-month-summary">240 ч.</td>
+          <td class="group-month-summary">240 ч.</td>
+          <td class="group-month-summary">240 ч.</td>
+          <td class="sticky-proof group-proof-summary">2 400 / 2 400 ч. ✓</td>
+        </tr>
+
+        <!-- Child Row 3.1 -->
+        <tr class="child-subject-row group_dz23">
+          <td class="sticky-col subject-name-td">
+            <div class="subject-title-box">
+              <span class="subj-name">Дизайн & UI/UX проектирование</span>
+              <span class="subj-code">План: 320 ч.</span>
+            </div>
+          </td>
+          <td class="cell-data">Айтиева (32 ч.)</td>
+          <td class="cell-data">Айтиева (32 ч.)</td>
+          <td class="cell-data">Айтиева (32 ч.)</td>
+          <td class="cell-data">Айтиева (32 ч.)</td>
+          <td class="cell-data">Айтиева (32 ч.)</td>
+          <td class="cell-data">Айтиева (32 ч.)</td>
+          <td class="cell-data">Айтиева (32 ч.)</td>
+          <td class="cell-data">Айтиева (32 ч.)</td>
+          <td class="cell-data">Айтиева (32 ч.)</td>
+          <td class="cell-data">Айтиева (32 ч.)</td>
+          <td class="sticky-proof proof-ok">320 / 320 ч. ✓</td>
+        </tr>
+
+        <!-- Child Row 3.2 -->
+        <tr class="child-subject-row group_dz23">
+          <td class="sticky-col subject-name-td">
+            <div class="subject-title-box">
+              <span class="subj-name">Преддипломная практика</span>
+              <span class="subj-code">План: 2080 ч.</span>
+            </div>
+          </td>
+          <td class="cell-data practice-cell">Дизайн-студии (208ч)</td>
+          <td class="cell-data practice-cell">Дизайн-студии (208ч)</td>
+          <td class="cell-data practice-cell">Дизайн-студии (208ч)</td>
+          <td class="cell-data practice-cell">Дизайн-студии (208ч)</td>
+          <td class="cell-data practice-cell">Дизайн-студии (208ч)</td>
+          <td class="cell-data practice-cell">Дизайн-студии (208ч)</td>
+          <td class="cell-data practice-cell">Дизайн-студии (208ч)</td>
+          <td class="cell-data practice-cell">Дизайн-студии (208ч)</td>
+          <td class="cell-data practice-cell">Дизайн-студии (208ч)</td>
+          <td class="cell-data practice-cell">Дизайн-студии (208ч)</td>
+          <td class="sticky-proof proof-ok">2080 / 2080 ч. ✓</td>
+        </tr>
+
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+{% block styles %}
+/* YEARLY AUDIT MATRIX STYLES */
+.yearly-audit-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+}
+
+.audit-toolbar {
+  background: #1a1a24;
+  border: 1px solid #2d2d3a;
+  border-radius: 14px;
+  padding: 16px 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.toolbar-left { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
+
+.audit-status-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  color: #10b981;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.pulse-green {
+  width: 8px;
+  height: 8px;
+  background: #10b981;
+  border-radius: 50%;
+  box-shadow: 0 0 8px #10b981;
+  animation: pulseGreen 2s infinite;
+}
+
+@keyframes pulseGreen {
+  0% { transform: scale(0.95); opacity: 0.8; }
+  50% { transform: scale(1.2); opacity: 1; }
+  100% { transform: scale(0.95); opacity: 0.8; }
+}
+
+.view-toggle {
+  display: flex;
+  background: #0f0f13;
+  padding: 4px;
+  border-radius: 10px;
+  border: 1px solid #2d2d3a;
+}
+
+.toggle-btn {
+  color: #94a3b8;
+  text-decoration: none;
+  padding: 8px 18px;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 8px;
+  transition: all 0.25s ease;
+}
+
+.toggle-btn.active {
+  background: linear-gradient(135deg, #8b5cf6 0%, #06b6d4 100%);
+  color: #ffffff;
+  box-shadow: 0 0 14px rgba(139, 92, 246, 0.4);
+}
+
+.toolbar-right { display: flex; align-items: center; gap: 12px; }
+
+.btn-expand-all {
+  background: #0f0f13;
+  border: 1px solid #2d2d3a;
+  color: #ffffff;
+  padding: 9px 16px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+}
+.btn-expand-all:hover { border-color: #8b5cf6; color: #8b5cf6; }
+
+.btn-excel {
+  background: rgba(6, 182, 212, 0.15);
+  border: 1px solid rgba(6, 182, 212, 0.35);
+  color: #06b6d4;
+  padding: 9px 18px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.25s ease;
+}
+.btn-excel:hover {
+  background: rgba(6, 182, 212, 0.25);
+  box-shadow: 0 0 16px rgba(6, 182, 212, 0.35);
+}
+
+/* HIGH-DENSITY STICKY TABLE CONTAINER */
+.table-container {
+  width: 100%;
+  max-height: 700px;
+  overflow: auto;
+  border: 1px solid #2d2d3a;
+  border-radius: 16px;
+  background: #0f0f13;
+}
+
+/* Custom Sleek Scrollbar */
+.table-container::-webkit-scrollbar { width: 8px; height: 8px; }
+.table-container::-webkit-scrollbar-track { background: #0f0f13; }
+.table-container::-webkit-scrollbar-thumb { background: #2d2d3a; border-radius: 4px; }
+.table-container::-webkit-scrollbar-thumb:hover { background: #8b5cf6; }
+
+.audit-matrix-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-family: 'JetBrains Mono', 'Inter', monospace;
+  font-variant-numeric: tabular-nums;
+  font-size: 12px;
+  min-width: 1600px;
+}
+
+/* STICKY HEADER ROW (TOP) */
+.header-months-row th {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: #1a1a24;
+  color: #ffffff;
+  padding: 14px 16px;
+  font-weight: 700;
+  text-transform: uppercase;
+  font-size: 12px;
+  border-bottom: 2px solid #2d2d3a;
+  border-right: 1px solid #2d2d3a;
+  text-align: center;
+}
+
+/* STICKY TOP-LEFT CORNER CELL */
+.sticky-top-left {
+  position: sticky;
+  left: 0;
+  top: 0;
+  z-index: 20 !important;
+  background: #1a1a24 !important;
+  border-right: 2px solid #2d2d3a !important;
+  text-align: left !alignment;
+  width: 320px;
+  min-width: 320px;
+}
+
+/* STICKY TOP-RIGHT CORNER (PROOF) */
+.sticky-top-right {
+  position: sticky;
+  right: 0;
+  top: 0;
+  z-index: 20 !important;
+  background: #1a1a24 !important;
+  border-left: 2px solid #2d2d3a !important;
+  color: #06b6d4 !important;
+  width: 160px;
+  min-width: 160px;
+}
+
+/* STICKY LEFT COLUMN (GROUPS & SUBJECTS) */
+.sticky-col {
+  position: sticky;
+  left: 0;
+  z-index: 5;
+  background: #1a1a24 !important;
+  border-right: 2px solid #2d2d3a !important;
+  width: 320px;
+  min-width: 320px;
+}
+
+/* STICKY RIGHT COLUMN ("PROOF" COLUMN) */
+.sticky-proof {
+  position: sticky;
+  right: 0;
+  z-index: 5;
+  background: #1a1a24 !important;
+  border-left: 2px solid #2d2d3a !important;
+  text-align: center;
+  font-weight: 700;
+  width: 160px;
+  min-width: 160px;
+}
+
+/* PARENT ROW (GROUP HEADER ACCORDION) */
+.group-parent-row {
+  background: #14141d;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.group-parent-row:hover {
+  background: #1e1e2c !important;
+}
+
+.group-name-td { padding: 14px 18px !important; }
+
+.group-toggle-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.toggle-arrow {
+  font-size: 11px;
+  color: #8b5cf6;
+  transition: transform 0.25s ease;
+  user-select: none;
+}
+
+.group-parent-row.collapsed .toggle-arrow {
+  transform: rotate(-90deg);
+}
+
+.group-badge {
+  background: rgba(139, 92, 246, 0.2);
+  color: #8b5cf6;
+  border: 1px solid rgba(139, 92, 246, 0.4);
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 800;
+  font-family: 'Inter', sans-serif;
+}
+
+.badge-cyan { background: rgba(6, 182, 212, 0.2); color: #06b6d4; border-color: rgba(6, 182, 212, 0.4); }
+.badge-emerald { background: rgba(16, 185, 129, 0.2); color: #10b981; border-color: rgba(16, 185, 129, 0.4); }
+
+.group-label-text {
+  font-size: 13px;
+  font-weight: 700;
+  color: #ffffff;
+  font-family: 'Inter', sans-serif;
+}
+
+.group-month-summary {
+  padding: 14px 12px;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: #94a3b8;
+  border-bottom: 1px solid #2d2d3a;
+  border-right: 1px solid #2d2d3a;
+}
+
+.group-proof-summary {
+  color: #06b6d4 !important;
+  font-size: 13px;
+  border-bottom: 1px solid #2d2d3a;
+}
+
+/* CHILD SUBJECT ROWS */
+.child-subject-row {
+  background: #141420;
+  transition: background 0.15s ease;
+}
+
+/* ROW HOVER EFFECT FOR EYE TRACKING ACROSS WIDE TABLE */
+.child-subject-row:hover {
+  background: rgba(139, 92, 246, 0.12) !important;
+}
+
+.child-subject-row:hover .sticky-col,
+.child-subject-row:hover .sticky-proof {
+  background: #1c1c2e !important;
+}
+
+.subject-name-td {
+  padding: 10px 18px 10px 36px !important;
+  border-bottom: 1px solid #2d2d3a;
+  background: #141420;
+}
+
+.subject-title-box {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.subj-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: #f8fafc;
+  font-family: 'Inter', sans-serif;
+}
+
+.subj-code {
+  font-size: 10px;
+  color: #94a3b8;
+}
+
+.cell-data {
+  padding: 10px 12px;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 500;
+  color: #e2e8f0;
+  border-bottom: 1px solid #2d2d3a;
+  border-right: 1px solid #2d2d3a;
+}
+
+.cell-empty {
+  padding: 10px 12px;
+  text-align: center;
+  font-size: 12px;
+  color: #475569;
+  border-bottom: 1px solid #2d2d3a;
+  border-right: 1px solid #2d2d3a;
+}
+
+.practice-cell {
+  color: #34d399;
+  font-weight: 600;
+  background: rgba(16, 185, 129, 0.12);
+}
+
+.proof-ok {
+  color: #34d399 !important;
+  font-size: 12px;
+  font-weight: 700;
+  border-bottom: 1px solid #2d2d3a;
+}
+
+/* ACCORDION COLLAPSE UTILITY CLASS */
+.collapsed-child {
+  display: none !important;
+}
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // ACCORDION TOGGLE FOR INDIVIDUAL GROUPS
+  function toggleGroupAccordion(groupClass, parentRow) {
+    const childRows = document.getElementsByClassName(groupClass);
+    let isCollapsed = false;
+
+    for (let row of childRows) {
+      row.classList.toggle('collapsed-child');
+      if (row.classList.contains('collapsed-child')) {
+        isCollapsed = true;
+      }
+    }
+
+    if (isCollapsed) {
+      parentRow.classList.add('collapsed');
+    } else {
+      parentRow.classList.remove('collapsed');
+    }
+  }
+
+  // TOGGLE ALL ACCORDIONS AT ONCE
+  let allExpanded = true;
+  function toggleAllAccordions() {
+    const childRows = document.querySelectorAll('.child-subject-row');
+    const parentRows = document.querySelectorAll('.group-parent-row');
+    const icon = document.getElementById('expandAllIcon');
+
+    allExpanded = !allExpanded;
+
+    childRows.forEach(row => {
+      if (allExpanded) {
+        row.classList.remove('collapsed-child');
+      } else {
+        row.classList.add('collapsed-child');
+      }
+    });
+
+    parentRows.forEach(p => {
+      if (allExpanded) {
+        p.classList.remove('collapsed');
+      } else {
+        p.classList.add('collapsed');
+      }
+    });
+
+    if (allExpanded) {
+      icon.innerText = '▼';
+    } else {
+      icon.innerText = '▲';
+    }
+  }
+</script>
+{% endblock %}

@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="ru" class="light-theme">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}KALIX — Лицей SaaS Расписание{% endblock %}</title>
+  <!-- Google Fonts: Inter & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+  <style>
+    /* ==========================================
+       KALIX AGENCY B2B DARK SYSTEM (PURE CSS)
+       ========================================== */
+    :root {
+      --bg-dark: #07090e;
+      --sidebar-bg: rgba(11, 15, 25, 0.95);
+      --card-bg: rgba(15, 23, 42, 0.75);
+      --card-border: rgba(255, 255, 255, 0.08);
+      --card-hover-border: rgba(139, 92, 246, 0.4);
+
+      --text-primary: #f8fafc;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+
+      --accent-purple: #8b5cf6;
+      --accent-blue: #3b82f6;
+      --accent-cyan: #06b6d4;
+      --accent-gradient: linear-gradient(135deg, #8b5cf6 0%, #3b82f6 100%);
+      --accent-glow: 0 0 25px rgba(139, 92, 246, 0.4);
+
+      --danger-red: #ff3366;
+      --danger-glow: 0 0 20px rgba(255, 51, 102, 0.4);
+      --success-green: #10b981;
+
+      --input-bg: #0f172a;
+      --input-border: #1e293b;
+
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 18px;
+
+      --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background-color: var(--bg-dark);
+      color: var(--text-primary);
+      min-height: 100vh;
+      display: flex;
+      background-image: 
+        radial-gradient(circle at 10% 10%, rgba(139, 92, 246, 0.09) 0%, transparent 45%),
+        radial-gradient(circle at 90% 90%, rgba(6, 182, 212, 0.09) 0%, transparent 45%);
+      background-attachment: fixed;
+    }
+
+    /* ==========================================
+       PERSISTENT SIDEBAR NAVIGATION
+       ========================================== */
+    .app-sidebar {
+      width: 260px;
+      background: var(--sidebar-bg);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-right: 1px solid var(--card-border);
+      display: flex;
+      flex-direction: column;
+      padding: 24px 16px;
+      position: fixed;
+      top: 0; bottom: 0; left: 0;
+      z-index: 100;
+    }
+
+    .sidebar-brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding-bottom: 24px;
+      margin-bottom: 24px;
+      border-bottom: 1px solid var(--card-border);
+    }
+
+    .brand-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: var(--radius-md);
+      background: var(--accent-gradient);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: var(--accent-glow);
+      flex-shrink: 0;
+    }
+
+    .brand-icon svg { width: 22px; height: 22px; fill: #ffffff; }
+
+    .brand-title {
+      font-size: 20px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      color: #ffffff;
+      text-transform: uppercase;
+    }
+
+    .brand-subtitle {
+      font-size: 11px;
+      color: var(--text-secondary);
+      letter-spacing: 0.02em;
+    }
+
+    .nav-menu {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      flex: 1;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 600;
+      border-radius: var(--radius-md);
+      transition: var(--transition);
+    }
+
+    .nav-item:hover {
+      color: var(--text-primary);
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .nav-item.active {
+      background: var(--accent-gradient);
+      color: #ffffff;
+      box-shadow: var(--accent-glow);
+    }
+
+    .nav-item.danger-link {
+      color: #ff668c;
+      margin-top: auto;
+    }
+
+    .nav-item.danger-link:hover {
+      background: rgba(255, 51, 102, 0.15);
+      color: var(--danger-red);
+    }
+
+    .nav-item svg {
+      width: 18px;
+      height: 18px;
+      flex-shrink: 0;
+    }
+
+    .sidebar-footer {
+      padding-top: 20px;
+      border-top: 1px solid var(--card-border);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .tenant-badge {
+      background: rgba(99, 102, 241, 0.12);
+      border: 1px solid rgba(99, 102, 241, 0.3);
+      padding: 10px 12px;
+      border-radius: var(--radius-md);
+      font-size: 12px;
+    }
+
+    .tenant-name {
+      font-weight: 700;
+      color: #ffffff;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .tenant-tier {
+      color: var(--accent-cyan);
+      font-size: 11px;
+      margin-top: 2px;
+      font-weight: 500;
+    }
+
+    /* ==========================================
+       MAIN CONTENT CONTAINER
+       ========================================== */
+    .app-main {
+      margin-left: 260px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+      padding: 28px 36px;
+    }
+
+    .top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 28px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--card-border);
+    }
+
+    .page-title {
+      font-size: 20px;
+      font-weight: 700;
+      color: #ffffff;
+    }
+
+    .user-pill {
+      font-size: 13px;
+      color: var(--text-secondary);
+      background: rgba(15, 23, 42, 0.8);
+      border: 1px solid var(--card-border);
+      padding: 8px 14px;
+      border-radius: var(--radius-md);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* Flash Alerts */
+    .flash-container {
+      margin-bottom: 20px;
+    }
+
+    .flash-alert {
+      padding: 14px 18px;
+      border-radius: var(--radius-md);
+      font-size: 14px;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+
+    .flash-error {
+      background: rgba(255, 51, 102, 0.15);
+      border: 1px solid var(--danger-red);
+      color: #ff668c;
+      box-shadow: var(--danger-glow);
+    }
+    .flash-success {
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid var(--success-green);
+      color: #34d399;
+    }
+
+    /* CHILD TEMPLATE STYLES */
+    {% block styles %}{% endblock %}
+
+    /* =========================================================================
+       COMPLETE LIGHT MODE ENGINE (CLEAN WHITE BACKGROUND, CRISP BORDERS)
+       ========================================================================= */
+    html.light-theme,
+    body.light-theme {
+      --bg-dark: #ffffff !important;
+      --sidebar-bg: #ffffff !important;
+      --card-bg: #ffffff !important;
+      --card-border: #e2e8f0 !important;
+      --input-bg: #f8fafc !important;
+      --input-border: #e2e8f0 !important;
+
+      --text-primary: #0f172a !important;
+      --text-secondary: #334155 !important;
+      --text-muted: #64748b !important;
+
+      background-color: #ffffff !important;
+      color: #0f172a !important;
+      background-image: none !important;
+    }
+
+    /* 1. All Containers, Cards, Inputs, and Wrappers in Light Mode */
+    body.light-theme .app-sidebar,
+    body.light-theme .app-main,
+    body.light-theme .top-bar,
+    body.light-theme .action-card,
+    body.light-theme .roster-card,
+    body.light-theme .weekly-toolbar,
+    body.light-theme .weekly-grid-container,
+    body.light-theme .table-container,
+    body.light-theme .audit-toolbar,
+    body.light-theme .settings-card,
+    body.light-theme .faq-card,
+    body.light-theme .tariff-card,
+    body.light-theme .modal-card,
+    body.light-theme .group-card,
+    body.light-theme .group-item-card,
+    body.light-theme .groups-layout .card,
+    body.light-theme .upload-box,
+    body.light-theme .day-column,
+    body.light-theme .time-column,
+    body.light-theme .grid-time-slot,
+    body.light-theme .grid-day-header,
+    body.light-theme .grid-time-corner,
+    body.light-theme .billing-selector,
+    body.light-theme .form-control,
+    body.light-theme select.form-control,
+    body.light-theme input.form-control {
+      background-color: #ffffff !important;
+      background: #ffffff !important;
+      color: #000000 !important;
+      border-color: #cbd5e1 !important;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04) !important;
+    }
+
+    /* 2. Form Inputs, Select Boxes, and Textareas in Light Mode */
+    body.light-theme .form-control,
+    body.light-theme input,
+    body.light-theme select,
+    body.light-theme option {
+      background-color: #f8fafc !important;
+      background: #f8fafc !important;
+      color: #000000 !important;
+      border-color: #cbd5e1 !important;
+    }
+
+    /* 3. Tariff Billing Selector Radio Option Boxes (Screenshot 2 Fix) */
+    body.light-theme .billing-selector,
+    body.light-theme .billing-option {
+      background-color: #f1f5f9 !important;
+      background: #f1f5f9 !important;
+      color: #000000 !important;
+      border-color: #cbd5e1 !important;
+    }
+    body.light-theme .billing-option span,
+    body.light-theme .billing-option input {
+      color: #000000 !important;
+    }
+
+    /* 4. Weekly Grid & Dashboard Cells (Screenshot 1 Fix) */
+    body.light-theme .grid-row,
+    body.light-theme .grid-cell {
+      background-color: #ffffff !important;
+      background: #ffffff !important;
+      border-color: #cbd5e1 !important;
+    }
+    body.light-theme .grid-time-slot,
+    body.light-theme .grid-day-header,
+    body.light-theme .day-header,
+    body.light-theme .time-column,
+    body.light-theme .row-single-lesson {
+      background-color: #f1f5f9 !important;
+      background: #f1f5f9 !important;
+      border-color: #cbd5e1 !important;
+    }
+    body.light-theme .slot-number,
+    body.light-theme .slot-time,
+    body.light-theme .slot-duration,
+    body.light-theme .corner-text,
+    body.light-theme .day-date,
+    body.light-theme .day-name,
+    body.light-theme .empty-text {
+      color: #000000 !important;
+    }
+    body.light-theme .empty-slot {
+      border-color: #cbd5e1 !important;
+      background: #f8fafc !important;
+      color: #000000 !important;
+    }
+    body.light-theme .lesson-card {
+      background-color: #f8fafc !important;
+      background: #f8fafc !important;
+      border-color: #cbd5e1 !important;
+    }
+    body.light-theme .card-subject,
+    body.light-theme .card-teacher,
+    body.light-theme .card-room,
+    body.light-theme .card-time {
+      color: #000000 !important;
+    }
+
+    /* 5. Yearly Matrix Data Table & Accordions (Screenshot 3 Fix) */
+    body.light-theme .audit-matrix-table,
+    body.light-theme .audit-matrix-table th,
+    body.light-theme .audit-matrix-table td,
+    body.light-theme .roster-table,
+    body.light-theme .roster-table th,
+    body.light-theme .roster-table td {
+      color: #000000 !important;
+      border-color: #cbd5e1 !important;
+    }
+    body.light-theme .month-col,
+    body.light-theme .header-months-row th,
+    body.light-theme .sticky-top-left,
+    body.light-theme .sticky-top-right,
+    body.light-theme .roster-table th {
+      background-color: #e2e8f0 !important;
+      background: #e2e8f0 !important;
+      color: #000000 !important;
+    }
+    body.light-theme .group-parent-row,
+    body.light-theme .group-parent-row td,
+    body.light-theme .group-parent-row .sticky-col,
+    body.light-theme .group-parent-row .sticky-proof,
+    body.light-theme .group-parent-row .group-title,
+    body.light-theme .group-parent-row .group-info {
+      background-color: #cbd5e1 !important;
+      background: #cbd5e1 !important;
+      color: #000000 !important;
+    }
+    body.light-theme .child-subject-row,
+    body.light-theme .child-subject-row td,
+    body.light-theme .child-subject-row .sticky-col,
+    body.light-theme .child-subject-row .sticky-proof,
+    body.light-theme .subject-name-td,
+    body.light-theme .cell-data {
+      background-color: #ffffff !important;
+      background: #ffffff !important;
+      color: #000000 !important;
+    }
+    body.light-theme .subj-name,
+    body.light-theme .subj-code,
+    body.light-theme .cell-empty,
+    body.light-theme .proof-ok {
+      color: #000000 !important;
+    }
+
+    /* 6. Group Management Cards & Forms */
+    body.light-theme .group-item-card,
+    body.light-theme .group-header,
+    body.light-theme .group-number,
+    body.light-theme .group-info {
+      background-color: #f8fafc !important;
+      background: #f8fafc !important;
+      color: #000000 !important;
+      border-color: #cbd5e1 !important;
+    }
+
+    /* 7. EXPLICIT BUTTON & TAB COLOR RULES (LIGHT MODE & DARK MODE SAFETY) */
+
+    /* Primary Gradient Buttons (ALWAYS PURE WHITE TEXT #ffffff IN ALL THEMES) */
+    .btn-primary,
+    .btn-approve,
+    .btn-submit,
+    .btn-auto-gen,
+    .btn-featured,
+    .btn-login,
+    .btn-excel,
+    .btn-excel-action,
+    .btn-save,
+    .btn-save-teacher,
+    .btn-save-sub,
+    .btn-upload,
+    .btn-bulk-upload,
+    .btn-group-detail,
+    body.light-theme .btn-primary,
+    body.light-theme .btn-approve,
+    body.light-theme .btn-submit,
+    body.light-theme .btn-auto-gen,
+    body.light-theme .btn-featured,
+    body.light-theme .btn-login,
+    body.light-theme .btn-excel,
+    body.light-theme .btn-excel-action,
+    body.light-theme .btn-save,
+    body.light-theme .btn-save-teacher,
+    body.light-theme .btn-save-sub,
+    body.light-theme .btn-upload,
+    body.light-theme .btn-bulk-upload,
+    body.light-theme .btn-group-detail,
+    body.light-theme button[type="submit"] {
+      color: #ffffff !important;
+      font-weight: 700 !important;
+      background-image: linear-gradient(135deg, #8b5cf6 0%, #3b82f6 100%) !important;
+    }
+
+    /* Secondary & Outline Buttons in Light Mode */
+    body.light-theme .btn-secondary,
+    body.light-theme .btn-cancel,
+    body.light-theme .btn-expand-all,
+    body.light-theme .btn-action {
+      background-color: #e2e8f0 !important;
+      background: #e2e8f0 !important;
+      color: #0f172a !important;
+      border-color: #cbd5e1 !important;
+    }
+
+    body.light-theme .btn-substitute-trigger {
+      background-color: #fef3c7 !important;
+      background: #fef3c7 !important;
+      color: #b45309 !important;
+      border-color: #fcd34d !important;
+    }
+
+    /* View Switch Tabs in Light Mode */
+    body.light-theme .view-mode-tabs,
+    body.light-theme .view-switch-tabs {
+      background: #e2e8f0 !important;
+      border-color: #cbd5e1 !important;
+    }
+
+    body.light-theme .view-tab,
+    body.light-theme .day-btn,
+    body.light-theme .view-mode-tab {
+      color: #475569 !important;
+      background: transparent !important;
+    }
+
+    body.light-theme .view-tab.active,
+    body.light-theme .view-tab-btn.active,
+    body.light-theme .day-btn.active,
+    body.light-theme .view-mode-tab.active,
+    body.light-theme .audit-tab-active {
+      background: linear-gradient(135deg, #8b5cf6 0%, #3b82f6 100%) !important;
+      color: #ffffff !important;
+      box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3) !important;
+    }
+
+    /* Universal Text Enforcer for light mode (excluding buttons, badges, active tabs, and deliberately dark matrix elements) */
+    body.light-theme h1, body.light-theme h2, body.light-theme h3:not(.modal-title),
+    body.light-theme h4, body.light-theme h5, body.light-theme h6,
+    body.light-theme p:not(.audit-desc), body.light-theme li, body.light-theme label,
+    body.light-theme td:not(.cell-data):not(.month-col), body.light-theme th:not(.grid-header-cell),
+    body.light-theme span:not(.btn):not(.badge):not(.tag):not(.active):not(.group-badge):not(.room-badge):not(.slot-subject):not(.slot-teacher),
+    body.light-theme div:not(.btn):not(.badge):not(.tag):not(.active):not(.card-conflict):not(.grid-header-cell):not(.time-cell):not(.slot-filled):not(.slot-subject):not(.slot-teacher):not(.modal-card):not(.audit-banner):not(.brand-icon) {
+      color: #0f172a !important;
+    }
+  </style>
+
+  <script>
+    (function() {
+      const savedTheme = localStorage.getItem('theme');
+      if (savedTheme === 'dark') {
+        document.documentElement.classList.remove('light-theme');
+        document.addEventListener('DOMContentLoaded', () => document.body.classList.remove('light-theme'));
+      } else {
+        document.documentElement.classList.add('light-theme');
+        document.addEventListener('DOMContentLoaded', () => document.body.classList.add('light-theme'));
+      }
+    })();
+  </script>
+</head>
+<body class="light-theme">
+
+  <!-- Persistent Sidebar Navigation -->
+  <aside class="app-sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-icon">
+        <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      </div>
+      <div>
+        <div class="brand-title">KALIX</div>
+        <div class="brand-subtitle">Лицей SaaS</div>
+      </div>
+    </div>
+
+    <!-- Navigation Menu (Оригинальное меню из скриншота) -->
+    <nav class="nav-menu">
+      <!-- 1. Недельная сетка -->
+      <a href="/dashboard" class="nav-item {% if active_page in ['dashboard', 'schedule'] %}active{% endif %}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        <span>Недельная сетка</span>
+      </a>
+
+      <!-- 2. Годовая сетка (3 дня триал) -->
+      <a href="/schedule/yearly" class="nav-item {% if active_page in ['yearly_schedule', 'yearly_matrix'] %}active{% endif %}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+        <span>Годовая сетка (3 дня триал)</span>
+      </a>
+
+      <!-- 3. Группы и Учебные планы -->
+      <a href="/groups" class="nav-item {% if active_page in ['groups', 'group_detail'] %}active{% endif %}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        <span>Группы и Учебные планы</span>
+      </a>
+
+      <!-- 4. Преподаватели -->
+      <a href="/teachers" class="nav-item {% if active_page == 'teachers' %}active{% endif %}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        <span>Преподаватели</span>
+      </a>
+
+      <!-- 5. Управление тарифом -->
+      <a href="/tariffs" class="nav-item {% if active_page in ['tariffs', 'subscriptions'] %}active{% endif %}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+        <span>Управление тарифом</span>
+      </a>
+
+      <!-- 6. Настройки и Инструкции -->
+      <a href="/settings" class="nav-item {% if active_page in ['settings', 'schedule_config'] %}active{% endif %}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        <span>Настройки и Инструкции</span>
+      </a>
+
+      <!-- Выход -->
+      <a href="/logout" class="nav-item danger-link">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        <span>Выход</span>
+      </a>
+    </nav>
+
+    <!-- Sidebar Tenant Footer -->
+    <div class="sidebar-footer">
+      <div class="tenant-badge">
+        <div class="tenant-name">{{ lyceum.name if lyceum else session.get('lyceum_name', 'Профессиональный Лицей №14') }}</div>
+        <div class="tenant-tier">Тариф: {{ lyceum.tier_name if (lyceum and lyceum.tier_name) else session.get('tier_name', 'Старт') }}</div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main Content Container -->
+  <main class="app-main">
+    <div class="top-bar">
+      <h2 class="page-title">
+        {% block page_title %}Панель управления{% endblock %}
+      </h2>
+
+      <div class="user-pill">
+        👤 {{ session.get('email', 'Пользователь') }}
+      </div>
+    </div>
+
+    <!-- Flash Messages Container -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="flash-container">
+          {% for category, message in messages %}
+            <div class="flash-alert flash-{{ category }}">
+              <span>{{ message }}</span>
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    <!-- Dynamic Child Content Block -->
+    {% block content %}{% endblock %}
+  </main>
+
+  {% block modal %}{% endblock %}
+  {% block scripts %}{% endblock %}
+</body>
+</html>

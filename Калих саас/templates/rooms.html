@@ -1,0 +1,88 @@
+{% extends 'base.html' %}
+
+{% block title %}Кабинеты — KALIX SaaS{% endblock %}
+{% block page_title %}Управление фондом кабинетов и лабораторий{% endblock %}
+
+{% block content %}
+<div style="display: grid; grid-template-columns: 360px 1fr; gap: 24px; align-items: start;">
+
+  <!-- FORM: ADD ROOM -->
+  <section class="card action-card">
+    <div class="card-header">
+      <h3 class="card-title">Добавить кабинет / лабораторию</h3>
+      <p class="card-subtitle">Внесите помещение в фонд лицея</p>
+    </div>
+
+    <form method="POST" action="/rooms">
+      <div class="form-group" style="margin-bottom: 16px;">
+        <label class="form-label" for="roomNumber">Номер или название кабинета *</label>
+        <input type="text" id="roomNumber" name="room_number" class="form-control" placeholder="Каб. 101, Мастерская №2" required>
+      </div>
+
+      <div class="form-group" style="margin-bottom: 16px;">
+        <label class="form-label" for="roomCapacity">Вместимость (чел.)</label>
+        <input type="number" id="roomCapacity" name="capacity" class="form-control" value="30" min="1">
+      </div>
+
+      <div class="form-group" style="margin-bottom: 24px; display: flex; align-items: center; gap: 10px;">
+        <input type="checkbox" id="isComputerLab" name="is_computer_lab" style="width: 18px; height: 18px; cursor: pointer;">
+        <label for="isComputerLab" class="form-label" style="margin: 0; cursor: pointer;">Компьютерный класс / лаборатория</label>
+      </div>
+
+      <button type="submit" class="btn-primary" style="width: 100%;">+ Сохранить кабинет</button>
+    </form>
+  </section>
+
+  <!-- TABLE: ROOMS LIST -->
+  <section class="card roster-card">
+    <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+      <div>
+        <h3 class="card-title">Фонд кабинетов лицея</h3>
+        <p class="card-subtitle">Всего зарегистрировано: <strong>{{ rooms|length }}</strong> помещений</p>
+      </div>
+    </div>
+
+    <div class="table-container">
+      <table class="roster-table" style="width: 100%; border-collapse: collapse;">
+        <thead>
+          <tr>
+            <th style="padding: 12px; text-align: left;">Номер / Название</th>
+            <th style="padding: 12px; text-align: center;">Вместимость</th>
+            <th style="padding: 12px; text-align: center;">Тип помещения</th>
+            <th style="padding: 12px; text-align: right;">Действия</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in rooms %}
+          <tr style="border-top: 1px solid var(--card-border);">
+            <td style="padding: 12px; font-weight: 700;">{{ r.room_number }}</td>
+            <td style="padding: 12px; text-align: center;">{{ r.capacity }} мест</td>
+            <td style="padding: 12px; text-align: center;">
+              {% if r.is_computer_lab %}
+                <span style="background: rgba(6, 182, 212, 0.15); color: #06b6d4; padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: 700;">💻 Компьютерный класс</span>
+              {% else %}
+                <span style="background: rgba(139, 92, 246, 0.15); color: #8b5cf6; padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: 700;">Лекционная</span>
+              {% endif %}
+            </td>
+            <td style="padding: 12px; text-align: right;">
+              <form method="POST" action="/rooms/delete/{{ r.id }}" onsubmit="return confirm('Удалить кабинет {{ r.room_number }}?');" style="display: inline;">
+                <button type="submit" style="background: rgba(239, 68, 68, 0.15); color: #ef4444; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 700;">
+                  Удалить
+                </button>
+              </form>
+            </td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="4" style="text-align: center; padding: 32px; color: var(--text-secondary);">
+              В фонде лицея пока нет кабинетов. Добавьте первый кабинет через форму слева.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+</div>
+{% endblock %}

@@ -1,0 +1,200 @@
+{% extends 'base.html' %}
+
+{% block title %}Справочники — Лицей SaaS{% endblock %}
+{% block page_title %}Справочники (Преподаватели и Группы){% endblock %}
+
+{% block content %}
+<div class="forms-grid">
+
+  <!-- FORM 1: TEACHERS -->
+  <section class="card">
+    <div class="card-header">
+      <h3 class="card-title">Добавить Преподавателя</h3>
+      <p class="card-subtitle">ФИО и график доступности по дням</p>
+    </div>
+
+    <form id="teacherForm" onsubmit="handleTeacherSubmit(event)">
+      <div class="form-group">
+        <label class="form-label" for="teacherFullName">ФИО Преподавателя *</label>
+        <input type="text" id="teacherFullName" class="form-control" placeholder="Иванов Иван Иванович" required>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">График работы (Дни недели)</label>
+        <div class="days-grid">
+          <div class="day-card"><input type="checkbox" id="day-monday" checked><label for="day-monday" class="day-lbl">Пн</label></div>
+          <div class="day-card"><input type="checkbox" id="day-tuesday" checked><label for="day-tuesday" class="day-lbl">Вт</label></div>
+          <div class="day-card"><input type="checkbox" id="day-wednesday" checked><label for="day-wednesday" class="day-lbl">Ср</label></div>
+          <div class="day-card"><input type="checkbox" id="day-thursday" checked><label for="day-thursday" class="day-lbl">Чт</label></div>
+          <div class="day-card"><input type="checkbox" id="day-friday" checked><label for="day-friday" class="day-lbl">Пт</label></div>
+          <div class="day-card"><input type="checkbox" id="day-saturday" checked><label for="day-saturday" class="day-lbl">Сб</label></div>
+        </div>
+      </div>
+
+      <button type="submit" class="btn-submit">Сохранить преподавателя</button>
+    </form>
+
+    <div class="excel-actions-block" style="margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--card-border);">
+      <h4 style="font-size: 14px; font-weight: 700; color: #ffffff; margin-bottom: 12px;">Пакетный импорт преподавателей (Excel)</h4>
+      
+      <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+        <a href="/api/teachers/template" class="btn-excel-action btn-template" style="flex: 1; text-align: center; text-decoration: none;">
+          📥 Скачать шаблон (Excel)
+        </a>
+
+        <form method="POST" action="/api/teachers/upload" enctype="multipart/form-data" style="flex: 1;">
+          <input type="file" name="file" accept=".xlsx, .xls" required id="teacherExcelInput" style="display: none;" onchange="this.form.submit()">
+          <label for="teacherExcelInput" class="btn-excel-action btn-upload-label" style="display: block; text-align: center; cursor: pointer;">
+            📤 Загрузить преподавателей
+          </label>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <!-- FORM 2: GROUPS -->
+  <section class="card">
+    <div class="card-header">
+      <h3 class="card-title">Добавить Учебную Группу</h3>
+      <p class="card-subtitle">Лимит вашего тарифа: {{ session.get('group_limit', 5) }} групп</p>
+    </div>
+
+    <form id="groupForm" onsubmit="handleGroupSubmit(event)">
+      <div class="form-group">
+        <label class="form-label" for="groupNumber">Номер группы *</label>
+        <input type="text" id="groupNumber" class="form-control" placeholder="ИТ-21" required>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="courseYear">Курс обучения *</label>
+        <select id="courseYear" class="form-control" required>
+          <option value="1">1 курс</option>
+          <option value="2">2 курс</option>
+          <option value="3">3 курс</option>
+          <option value="4">4 курс</option>
+          <option value="5">5 курс</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="studentCount">Количество студентов *</label>
+        <input type="number" id="studentCount" class="form-control" placeholder="28" min="1" max="150" required>
+      </div>
+
+      <button type="submit" class="btn-submit" style="background: linear-gradient(135deg, #06b6d4 0%, #3b82f6 100%);">Сохранить группу</button>
+    </form>
+  </section>
+
+</div>
+{% endblock %}
+
+{% block styles %}
+.forms-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+  gap: 24px;
+}
+
+.card {
+  background: var(--card-bg);
+  backdrop-filter: blur(16px);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-lg);
+  padding: 28px;
+  position: relative;
+  overflow: hidden;
+}
+
+.card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; height: 2px;
+  background: var(--accent-gradient);
+}
+
+.card-title { font-size: 18px; font-weight: 700; color: #ffffff; }
+.card-subtitle { font-size: 13px; color: var(--text-secondary); margin-top: 4px; margin-bottom: 24px; }
+
+.form-group { margin-bottom: 20px; }
+.form-label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 8px; }
+
+.form-control {
+  width: 100%;
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  border-radius: var(--radius-md);
+  padding: 12px 16px;
+  color: var(--text-primary);
+  font-size: 14px;
+  outline: none;
+}
+
+.days-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 8px;
+}
+
+.day-card { position: relative; }
+.day-card input[type="checkbox"] { position: absolute; opacity: 0; width: 0; height: 0; }
+
+.day-lbl {
+  display: flex; justify-content: center; padding: 10px 4px;
+  background: var(--input-bg); border: 1px solid var(--input-border);
+  border-radius: var(--radius-sm); color: var(--text-secondary);
+  font-size: 13px; font-weight: 600; cursor: pointer; transition: var(--transition);
+}
+
+.day-card input[type="checkbox"]:checked + .day-lbl {
+  background: rgba(139, 92, 246, 0.18); border-color: var(--accent-purple); color: #ffffff;
+  box-shadow: 0 0 10px rgba(139, 92, 246, 0.25);
+}
+
+.btn-submit {
+  width: 100%; background: var(--accent-gradient); color: #ffffff; border: none;
+  padding: 14px; font-size: 14px; font-weight: 600; border-radius: var(--radius-md);
+  cursor: pointer; box-shadow: var(--accent-glow); margin-top: 8px; transition: var(--transition);
+}
+
+.btn-submit:hover { opacity: 0.95; transform: translateY(-1px); }
+
+.btn-excel-action {
+  padding: 10px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: var(--radius-md);
+  transition: var(--transition);
+}
+
+.btn-template {
+  background: rgba(6, 182, 212, 0.15);
+  border: 1px solid rgba(6, 182, 212, 0.35);
+  color: var(--accent-cyan);
+}
+.btn-template:hover {
+  background: rgba(6, 182, 212, 0.25);
+}
+
+.btn-upload-label {
+  background: rgba(139, 92, 246, 0.18);
+  border: 1px solid rgba(139, 92, 246, 0.4);
+  color: var(--text-primary);
+}
+.btn-upload-label:hover {
+  background: var(--accent-gradient);
+}
+{% endblock %}
+
+{% block scripts %}
+<script>
+  function handleTeacherSubmit(e) {
+    e.preventDefault();
+    alert("Преподаватель успешно добавлен!");
+  }
+
+  function handleGroupSubmit(e) {
+    e.preventDefault();
+    alert("Группа успешно добавлена!");
+  }
+</script>
+{% endblock %}

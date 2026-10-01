@@ -1,0 +1,612 @@
+{% extends 'base.html' %}
+
+{% block title %}Расписание на неделю — KALIX SaaS{% endblock %}
+{% block page_title %}1. Расписание на неделю (Главный рабочий экран){% endblock %}
+
+{% block content %}
+<div class="weekly-schedule-wrapper">
+
+  <!-- TOP DASHBOARD NAVIGATION & FILTER TOOLBAR -->
+  <div class="weekly-toolbar">
+    <div class="toolbar-left">
+      <!-- Group Filter -->
+      <div class="filter-box">
+        <label for="groupSelect" class="selector-label">Группа:</label>
+        <select id="groupSelect" class="selector-dropdown" onchange="applyFilters()">
+          <option value="">-- Все группы --</option>
+          {% for g in groups %}
+            <option value="{{ g.id }}" {% if selected_group_id == g.id %}selected{% endif %}>
+              {{ g.name }} ({{ g.course_year }} курс)
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <!-- Teacher Filter -->
+      <div class="filter-box">
+        <label for="teacherSelect" class="selector-label">Преподаватель:</label>
+        <select id="teacherSelect" class="selector-dropdown" onchange="applyFilters()">
+          <option value="">-- Все преподаватели --</option>
+          {% for t in teachers %}
+            <option value="{{ t.id }}" {% if selected_teacher_id == t.id %}selected{% endif %}>
+              {{ t.full_name }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <!-- Room Filter -->
+      <div class="filter-box">
+        <label for="roomSelect" class="selector-label">Кабинет:</label>
+        <select id="roomSelect" class="selector-dropdown" onchange="applyFilters()">
+          <option value="">-- Все кабинеты --</option>
+          {% for r in rooms %}
+            <option value="{{ r.id }}" {% if selected_room_id == r.id %}selected{% endif %}>
+              {{ r.room_number }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+
+    <div class="toolbar-right">
+      <button type="button" class="btn-auto-gen" onclick="runAutoScheduler()">
+        🚀 Сгенерировать расписание
+      </button>
+
+      <a href="/export/excel" class="btn-action-excel">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Экспорт в Excel (.xlsx)
+      </a>
+    </div>
+  </div>
+
+  <!-- STATS & AUDIT KPI BANNER -->
+  <div class="schedule-kpi-bar">
+    <div class="kpi-item">
+      <span class="kpi-label">Всего занятий в базе:</span>
+      <span class="kpi-value highlight-cyan">{{ stats.total_assignments or 0 }}</span>
+    </div>
+    <div class="kpi-item">
+      <span class="kpi-label">Покрытие часов:</span>
+      <span class="kpi-value highlight-green">{{ stats.completion_percent or 100 }}%</span>
+    </div>
+    <div class="kpi-item">
+      <span class="kpi-label">Учебная нагрузка:</span>
+      <span class="kpi-value">{{ stats.total_allocated_hours or 0 }} из {{ stats.total_planned_hours or 0 }} ч.</span>
+    </div>
+    <div class="kpi-item">
+      <span class="kpi-label">Разрешено конфликтов по remaining_hours:</span>
+      <span class="kpi-value highlight-purple">{{ stats.conflicts_resolved_count or 0 }}</span>
+    </div>
+  </div>
+
+  <!-- WEEK NAVIGATION BAR -->
+  <div class="week-nav-bar">
+    <div class="week-nav-left">
+      {% if week_offset > 0 %}
+        <a href="javascript:void(0)" onclick="goToWeek({{ week_offset - 1 }})" class="btn-week-nav">
+          ← Пред. неделя
+        </a>
+      {% else %}
+        <span class="btn-week-nav disabled">← Начало уч. года</span>
+      {% endif %}
+
+      <div class="week-badge">
+        📅 Учебная неделя {{ week_offset + 1 }} 
+        <span class="week-dates-sub">({{ week_range_label }})</span>
+      </div>
+
+      <a href="javascript:void(0)" onclick="goToWeek({{ week_offset + 1 }})" class="btn-week-nav">
+        След. неделя →
+      </a>
+    </div>
+
+    <div class="week-nav-right">
+      <span class="badge-mode">
+        {% if works_on_saturdays %}6-дневная неделя (Пн-Сб){% else %}5-дневная неделя (Пн-Пт){% endif %}
+      </span>
+      <span class="badge-mode">Старт учебы: {{ academic_year_start_label }}</span>
+    </div>
+  </div>
+
+  <!-- MODERN CSS GRID WEEKLY CALENDAR MATRIX -->
+  <div class="weekly-grid-container">
+    
+    <!-- GRID HEADER: DAYS OF THE WEEK -->
+    <div class="grid-header-row" style="grid-template-columns: 140px repeat({{ week_days|length }}, 1fr);">
+      <div class="grid-time-corner">
+        <span class="corner-text">Звонки \ День</span>
+      </div>
+      {% for d in week_days %}
+        <div class="grid-day-header {% if d.is_today %}active-day{% endif %}">
+          <span class="day-name">{{ d.name }}</span>
+          <span class="day-date">{{ d.date_str }}</span>
+        </div>
+      {% endfor %}
+    </div>
+
+    <!-- GRID BODY ROWS (EXACTLY 4 SLOTS: 3 PAIRS + 1 SINGLE LESSON) -->
+    <div class="grid-body">
+      {% if time_slots %}
+        {% for slot in time_slots %}
+          <div class="grid-row {% if slot.slot_type == 'pair' %}row-pair{% else %}row-lesson{% endif %}" style="grid-template-columns: 140px repeat({{ week_days|length }}, 1fr);">
+            
+            <div class="grid-time-slot">
+              <span class="slot-number">{{ slot.label }}</span>
+              <span class="slot-time">{{ slot.start_str }} - {{ slot.end_str }}</span>
+              <span class="slot-duration">{{ slot.duration_str }}</span>
+            </div>
+
+            {% for d in week_days %}
+              {% set cell_items = grid.get((slot.slot_number, d.date), []) %}
+              <div class="grid-cell">
+                {% if cell_items %}
+                  {% for item in cell_items %}
+                    <div class="lesson-card theme-{{ item.theme }}">
+                      <div class="card-subject">{{ item.subject_name }}</div>
+                      <div class="card-teacher">👤 {{ item.teacher_name }}</div>
+                      <div class="card-footer">
+                        <span class="room-badge">🏛 {{ item.room_number }}</span>
+                        <span class="group-tag">🏷 {{ item.group_name }}</span>
+                      </div>
+                    </div>
+                  {% endfor %}
+                {% else %}
+                  <div class="empty-slot">
+                    <span class="empty-text">— Свободно —</span>
+                  </div>
+                {% endif %}
+              </div>
+            {% endfor %}
+
+          </div>
+        {% endfor %}
+      {% else %}
+        <div style="padding: 40px; text-align: center; color: var(--text-secondary);">
+          Сетка звонков не инициализирована. Перейдите в раздел «Настройки и Календарь».
+        </div>
+      {% endif %}
+    </div>
+
+  </div>
+
+</div>
+{% endblock %}
+
+{% block styles %}
+.weekly-schedule-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+}
+
+.weekly-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  padding: 16px 20px;
+  border-radius: var(--radius-lg);
+}
+
+.toolbar-left {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.filter-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.selector-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.selector-dropdown {
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  color: var(--text-primary);
+  padding: 8px 12px;
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  outline: none;
+  cursor: pointer;
+}
+
+.toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.btn-auto-gen {
+  background: var(--accent-gradient);
+  color: #ffffff;
+  border: none;
+  padding: 10px 18px;
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: var(--accent-glow);
+  transition: var(--transition);
+}
+
+.btn-auto-gen:hover {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+}
+
+.btn-action-excel {
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  color: #34d399;
+  padding: 9px 16px;
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: var(--transition);
+}
+
+.btn-action-excel:hover {
+  background: rgba(16, 185, 129, 0.25);
+  border-color: #34d399;
+}
+
+/* KPI BAR */
+.schedule-kpi-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid var(--card-border);
+  padding: 14px 20px;
+  border-radius: var(--radius-md);
+}
+
+.kpi-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.kpi-value {
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.highlight-cyan { color: var(--accent-cyan); }
+.highlight-green { color: var(--success-green); }
+.highlight-purple { color: var(--accent-purple); }
+
+/* WEEK NAV BAR */
+.week-nav-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.week-nav-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.btn-week-nav {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--card-border);
+  color: var(--text-primary);
+  padding: 6px 14px;
+  border-radius: var(--radius-md);
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.btn-week-nav:hover:not(.disabled) {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: var(--accent-purple);
+}
+
+.btn-week-nav.disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.week-badge {
+  font-size: 14px;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.week-dates-sub {
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.week-nav-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.badge-mode {
+  background: rgba(99, 102, 241, 0.15);
+  color: #a5b4fc;
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+/* GRID CONTAINER */
+.weekly-grid-container {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-lg);
+  overflow-x: auto;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+.grid-header-row {
+  display: grid;
+  border-bottom: 1px solid var(--card-border);
+  background: rgba(11, 15, 25, 0.8);
+}
+
+.grid-time-corner {
+  padding: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  border-right: 1px solid var(--card-border);
+}
+
+.grid-day-header {
+  padding: 12px 14px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  border-right: 1px solid var(--card-border);
+}
+
+.grid-day-header:last-child {
+  border-right: none;
+}
+
+.grid-day-header .day-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.grid-day-header .day-date {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.grid-day-header.active-day .day-name {
+  color: var(--accent-cyan);
+}
+
+/* ROWS */
+.grid-row {
+  display: grid;
+  border-bottom: 1px solid var(--card-border);
+  min-height: 100px;
+}
+
+.grid-row:last-child {
+  border-bottom: none;
+}
+
+.row-lesson {
+  background: rgba(99, 102, 241, 0.02);
+  min-height: 85px;
+}
+
+.row-lesson .slot-number {
+  color: var(--accent-cyan);
+}
+
+.grid-time-slot {
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 3px;
+  border-right: 1px solid var(--card-border);
+  background: rgba(15, 23, 42, 0.4);
+}
+
+.slot-number {
+  font-size: 12px;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.slot-time {
+  font-size: 11px;
+  color: var(--accent-cyan);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.slot-duration {
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.grid-cell {
+  padding: 8px;
+  border-right: 1px solid var(--card-border);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  justify-content: center;
+}
+
+.grid-cell:last-child {
+  border-right: none;
+}
+
+/* LESSON CARD */
+.lesson-card {
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  transition: var(--transition);
+  border-left: 3px solid transparent;
+}
+
+.lesson-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.theme-purple {
+  background: rgba(139, 92, 246, 0.12);
+  border-color: #8b5cf6;
+}
+.theme-cyan {
+  background: rgba(6, 182, 212, 0.12);
+  border-color: #06b6d4;
+}
+.theme-emerald {
+  background: rgba(16, 185, 129, 0.12);
+  border-color: #10b981;
+}
+.theme-amber {
+  background: rgba(245, 158, 11, 0.12);
+  border-color: #f59e0b;
+}
+.theme-blue {
+  background: rgba(59, 130, 246, 0.12);
+  border-color: #3b82f6;
+}
+.theme-rose {
+  background: rgba(244, 63, 94, 0.12);
+  border-color: #f43f5e;
+}
+
+.card-subject {
+  font-size: 12px;
+  font-weight: 700;
+  color: #ffffff;
+  line-height: 1.3;
+}
+
+.card-teacher {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 2px;
+  font-size: 10px;
+}
+
+.room-badge {
+  color: var(--accent-cyan);
+  font-weight: 600;
+}
+
+.group-tag {
+  background: rgba(255, 255, 255, 0.08);
+  padding: 2px 6px;
+  border-radius: 4px;
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.empty-slot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--text-muted);
+  font-size: 11px;
+}
+{% endblock %}
+
+{% block scripts %}
+<script>
+  function applyFilters() {
+    const groupId = document.getElementById('groupSelect').value;
+    const teacherId = document.getElementById('teacherSelect').value;
+    const roomId = document.getElementById('roomSelect').value;
+    const params = new URLSearchParams(window.location.search);
+    
+    if (groupId) params.set('group_id', groupId); else params.delete('group_id');
+    if (teacherId) params.set('teacher_id', teacherId); else params.delete('teacher_id');
+    if (roomId) params.set('room_id', roomId); else params.delete('room_id');
+    
+    window.location.search = params.toString();
+  }
+
+  function goToWeek(offset) {
+    const params = new URLSearchParams(window.location.search);
+    params.set('week_offset', offset);
+    window.location.search = params.toString();
+  }
+
+  async function runAutoScheduler() {
+    if (!confirm("Запустить автоматическую генерацию расписания лицея по календарному плану и правилам распределения часов?")) return;
+
+    const btn = document.querySelector('.btn-auto-gen');
+    const oldText = btn.innerHTML;
+    btn.innerHTML = '⏳ Генерация...';
+    btn.disabled = true;
+
+    try {
+      const res = await fetch('/api/schedule/generate', { method: 'POST' });
+      const data = await res.json();
+      if (data.success) {
+        alert(data.message);
+        window.location.reload();
+      } else {
+        alert("Ошибка генерации: " + (data.error || "Неизвестная ошибка"));
+      }
+    } catch (e) {
+      alert("Ошибка запроса к серверу: " + e);
+    } finally {
+      btn.innerHTML = oldText;
+      btn.disabled = false;
+    }
+  }
+</script>
+{% endblock %}

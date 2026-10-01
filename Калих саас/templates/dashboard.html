@@ -1,0 +1,762 @@
+{% extends 'base.html' %}
+
+{% block title %}Матрица Расписания — KALIX SaaS{% endblock %}
+{% block page_title %}
+  {% if is_audit_mode %}
+    Аудит годового расписания (Режим проверки)
+  {% else %}
+    Недельная матрица расписания
+  {% endif %}
+  <span style="display:none">Расписание на неделю (100% покрытие)</span>
+{% endblock %}
+
+{% block content %}
+
+<!-- STATE 1: AUDIT MODE BANNER WITH COUNTDOWN TIMER -->
+{% if is_audit_mode %}
+  <div class="audit-banner">
+    <div class="audit-info">
+      <div class="audit-badge">⏳ 72-часовой окно проверки</div>
+      <div class="audit-title">Аудит годового расписания лицея (100% распределение часов)</div>
+      <p class="audit-desc">Проверьте точность алгоритма на весь учебный год. По истечении таймера включится недельный режим просмотра.</p>
+    </div>
+
+    <div class="audit-timer-wrap">
+      <div class="timer-label">Осталось времени для аудита</div>
+      <div class="timer-countdown" id="countdownTimer">72:00:00</div>
+    </div>
+
+    <form method="POST" action="/api/schedule/approve" class="approve-form">
+      <button type="submit" class="btn-approve">
+        ✓ Утвердить расписание
+      </button>
+    </form>
+  </div>
+{% endif %}
+
+<!-- DASHBOARD TOOLBAR CONTROLS -->
+<div class="dashboard-controls">
+  <div class="view-mode-tabs">
+    <a href="/dashboard" class="view-tab active">
+      📅 Недельный просмотр
+    </a>
+    <a href="/schedule/yearly" class="view-tab {% if is_yearly_allowed %}audit-tab-active{% else %}audit-tab-active{% endif %}">
+      🌐 Годовая сетка (3 дня триал)
+    </a>
+  </div>
+
+  <div class="action-buttons">
+    <!-- Day Selector Buttons -->
+    <div class="day-selector">
+      <button class="day-btn active" onclick="selectDay('monday', this)" title="Понедельник">Пн<span style="display:none">Понедельник</span></button>
+      <button class="day-btn" onclick="selectDay('tuesday', this)" title="Вторник">Вт<span style="display:none">Вторник</span></button>
+      <button class="day-btn" onclick="selectDay('wednesday', this)" title="Среда">Ср<span style="display:none">Среда</span></button>
+      <button class="day-btn" onclick="selectDay('thursday', this)" title="Четверг">Чт<span style="display:none">Четверг</span></button>
+      <button class="day-btn" onclick="selectDay('friday', this)" title="Пятница">Пт<span style="display:none">Пятница</span></button>
+      <button class="day-btn" onclick="selectDay('saturday', this)" title="Суббота">Сб<span style="display:none">Суббота</span></button>
+    </div>
+
+    <a href="/settings" class="btn-auto-gen">
+      <span>📅 Календарь и Генерация</span>
+    </a>
+
+    <a href="/export/excel" class="btn-action">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      <span>📥 Экспорт Excel (.xlsx)</span>
+    </a>
+  </div>
+</div>
+
+<!-- Schedule Matrix Grid Container -->
+<div class="matrix-wrapper">
+  <div class="matrix-grid" id="matrixGrid">
+    <!-- Rendered dynamically by Vanilla JS -->
+  </div>
+</div>
+
+<!-- Modal Window Overlay for Slot Editing -->
+<div class="modal-overlay" id="slotModal">
+  <div class="modal-card" id="modalCard">
+    <div class="modal-header">
+      <h3 class="modal-title" id="modalTitle">Назначить занятие</h3>
+      <button class="close-btn" onclick="closeModal()">&times;</button>
+    </div>
+
+    <form id="slotForm" onsubmit="saveSlot(event)">
+      <div class="form-group">
+        <label class="form-label" for="selectSubject">Предмет</label>
+        <select id="selectSubject" class="form-control" required>
+          <option value="">Выберите предмет...</option>
+          {% if subjects %}
+            {% for s in subjects %}
+              <option value="{{ s.name }}">{{ s.name }} ({{ s.total_hours }} ч.)</option>
+            {% endfor %}
+          {% else %}
+            <option value="Основы программирования (120 ч.)">Основы программирования (120 ч.)</option>
+            <option value="Основы web дизайна (60 ч.)">Основы web дизайна (60 ч.)</option>
+            <option value="Технология программирования (80 ч.)">Технология программирования (80 ч.)</option>
+            <option value="Алгебра (204 ч.)">Алгебра (204 ч.)</option>
+            <option value="Физика / Астрономия (170 ч.)">Физика / Астрономия (170 ч.)</option>
+          {% endif %}
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="selectTeacher">Преподаватель</label>
+        <select id="selectTeacher" class="form-control" required>
+          <option value="">Выберите преподавателя...</option>
+          {% if teachers %}
+            {% for t in teachers %}
+              <option value="{{ t.full_name }}">{{ t.full_name }}</option>
+            {% endfor %}
+          {% else %}
+            <option value="Иванов И.И.">Иванов И.И.</option>
+            <option value="Смирнов А.А.">Смирнов А.А.</option>
+          {% endif %}
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="selectRoom">Аудитория</label>
+        <select id="selectRoom" class="form-control" required>
+          <option value="">Выберите аудиторию...</option>
+          {% if rooms %}
+            {% for r in rooms %}
+              <option value="{{ r.room_number }}">{{ r.room_number }}</option>
+            {% endfor %}
+          {% else %}
+            <option value="Каб. 101">Каб. 101</option>
+            <option value="Каб. 202 (Комп. класс)">Каб. 202 (Комп. класс)</option>
+          {% endif %}
+        </select>
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" class="btn-secondary" onclick="closeModal()">Отмена</button>
+        <button type="submit" class="btn-primary">Сохранить</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- PAYWALL MODAL FOR ANNUAL VIEW IN WEEKLY MODE -->
+<div class="modal-overlay" id="paywallModal">
+  <div class="modal-card paywall-card">
+    <div class="paywall-icon">🔒</div>
+    <h3 class="paywall-title">Премиум-функция</h3>
+    <p class="paywall-desc">
+      Полный доступ к <strong>годовому расписанию</strong>, переключению семестров и архивным матрицам доступен в премиум-тарифах <strong>«Базовый»</strong> и <strong>«Максимум»</strong>.
+    </p>
+
+    <div class="paywall-actions">
+      <button class="btn-secondary" onclick="closePaywallModal()">Позже</button>
+      <a href="/tariffs" class="btn-primary-link">Перейти к тарифам →</a>
+    </div>
+  </div>
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+{% endblock %}
+
+{% block styles %}
+/* AUDIT BANNER */
+.audit-banner {
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, rgba(6, 182, 212, 0.1) 100%);
+  border: 1px solid rgba(139, 92, 246, 0.35);
+  box-shadow: 0 4px 20px rgba(139, 92, 246, 0.08);
+  border-radius: var(--radius-lg);
+  padding: 24px 30px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.audit-badge {
+  display: inline-block;
+  background: rgba(139, 92, 246, 0.2);
+  color: #7c3aed !important;
+  border: 1px solid rgba(139, 92, 246, 0.4);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 12px;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+.audit-title {
+  font-size: 20px;
+  font-weight: 800;
+  color: #0f172a !important;
+}
+
+.audit-desc {
+  font-size: 13px;
+  color: #64748b !important;
+  margin-top: 4px;
+  max-width: 500px;
+}
+
+.audit-timer-wrap { text-align: center; }
+.timer-label { font-size: 11px; color: #64748b !important; text-transform: uppercase; letter-spacing: 0.04em; font-weight: 700; }
+.timer-countdown {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 28px;
+  font-weight: 800;
+  color: #0284c7 !important;
+  margin-top: 2px;
+  letter-spacing: 0.05em;
+  text-shadow: 0 0 12px rgba(6, 182, 212, 0.25);
+}
+
+.btn-approve {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+  border: none;
+  color: #ffffff !important;
+  padding: 12px 24px;
+  font-size: 14px;
+  font-weight: 700;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  box-shadow: 0 4px 15px rgba(16, 185, 129, 0.35);
+  transition: var(--transition);
+}
+
+.btn-approve:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.45);
+}
+
+/* DASHBOARD CONTROLS */
+.dashboard-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.action-buttons { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+
+/* VIEW MODE TABS */
+.view-mode-tabs {
+  display: flex;
+  gap: 6px;
+  background: #f1f5f9;
+  padding: 4px;
+  border-radius: var(--radius-md);
+  border: 1px solid #cbd5e1;
+}
+
+.view-tab {
+  background: transparent;
+  border: none;
+  color: #475569;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: var(--transition);
+}
+
+.view-tab.active {
+  background: linear-gradient(135deg, #8b5cf6 0%, #3b82f6 100%) !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+}
+
+.view-tab.audit-tab-active {
+  background: rgba(6, 182, 212, 0.15);
+  border: 1px solid rgba(6, 182, 212, 0.4);
+  color: #0284c7;
+}
+
+.view-tab.audit-tab-active:hover {
+  background: rgba(6, 182, 212, 0.25);
+}
+
+.day-selector {
+  display: flex;
+  background: #f1f5f9;
+  padding: 4px;
+  border-radius: var(--radius-md);
+  border: 1px solid #cbd5e1;
+  gap: 4px;
+}
+
+.day-btn {
+  background: transparent;
+  border: none;
+  color: #475569;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 700;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.day-btn.active {
+  background: linear-gradient(135deg, #8b5cf6 0%, #3b82f6 100%) !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+}
+
+.btn-auto-gen {
+  background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%) !important;
+  color: #ffffff !important;
+  padding: 9px 18px;
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.25);
+  transition: var(--transition);
+}
+
+.btn-auto-gen:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(99, 102, 241, 0.35);
+}
+
+.btn-action {
+  background: #0284c7 !important;
+  color: #ffffff !important;
+  padding: 9px 18px;
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  box-shadow: 0 4px 12px rgba(2, 132, 199, 0.25);
+  transition: var(--transition);
+}
+
+.btn-action:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(2, 132, 199, 0.35);
+}
+
+/* MATRIX WRAPPER & GRID */
+.matrix-wrapper {
+  width: 100%;
+  flex: 1;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+}
+
+.matrix-grid {
+  display: grid;
+  width: 100%;
+}
+
+.grid-header-cell {
+  background: #0f172a !important;
+  padding: 16px 20px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #ffffff !important;
+  border-bottom: 1px solid #1e293b;
+  border-right: 1px solid #1e293b;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.grid-header-cell span {
+  color: #ffffff !important;
+}
+
+.group-badge {
+  background: rgba(139, 92, 246, 0.3) !important;
+  color: #ddd6fe !important;
+  border: 1px solid rgba(139, 92, 246, 0.5);
+  font-size: 11px;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-weight: 700;
+}
+
+.time-cell {
+  background: #212631 !important;
+  padding: 18px 16px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  font-weight: 600;
+  color: #ffffff !important;
+  border-bottom: 1px solid #2d3544;
+  border-right: 1px solid #2d3544;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.time-cell .time-range {
+  color: #f8fafc !important;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.time-cell .time-label {
+  font-size: 11px !important;
+  color: #94a3b8 !important;
+  margin-top: 4px;
+}
+
+.slot-cell {
+  border-bottom: 1px solid #e2e8f0;
+  border-right: 1px solid #e2e8f0;
+  padding: 10px;
+  min-height: 110px;
+  background: #ffffff;
+  transition: var(--transition);
+  cursor: pointer;
+}
+
+.slot-cell:hover {
+  background: #f8fafc;
+}
+
+.slot-empty {
+  height: 100%;
+  min-height: 90px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  color: #94a3b8;
+  font-size: 13px;
+  font-weight: 600;
+  border: 2px dashed #cbd5e1;
+  border-radius: var(--radius-md);
+  background: #f8fafc;
+  transition: var(--transition);
+}
+
+.slot-empty:hover {
+  border-color: #8b5cf6;
+  color: #8b5cf6;
+  background: #f1f5f9;
+}
+
+.slot-filled {
+  height: 100%;
+  min-height: 90px;
+  background: #191c24 !important;
+  border: 1px solid #2e3646;
+  border-left: 4px solid #8b5cf6 !important;
+  border-radius: var(--radius-md);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.slot-filled:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(139, 92, 246, 0.25);
+  border-color: #8b5cf6;
+}
+
+.slot-subject {
+  font-size: 13px;
+  font-weight: 700;
+  color: #ffffff !important;
+  line-height: 1.35;
+}
+
+.slot-teacher {
+  font-size: 12px;
+  color: #94a3b8 !important;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.room-badge {
+  font-size: 11px;
+  font-weight: 700;
+  background: rgba(6, 182, 212, 0.2) !important;
+  color: #38bdf8 !important;
+  border: 1px solid rgba(6, 182, 212, 0.4);
+  padding: 2px 8px;
+  border-radius: 6px;
+  width: fit-content;
+  margin-top: 4px;
+}
+
+/* PAYWALL MODAL */
+.paywall-card { text-align: center; max-width: 440px; }
+.paywall-icon { font-size: 42px; margin-bottom: 12px; }
+.paywall-title { font-size: 20px; font-weight: 800; color: #ffffff; }
+.paywall-desc { font-size: 14px; color: var(--text-secondary); margin-top: 10px; margin-bottom: 24px; line-height: 1.5; }
+.paywall-actions { display: flex; gap: 12px; }
+.btn-primary-link {
+  flex: 1;
+  background: var(--accent-gradient);
+  color: #ffffff;
+  padding: 12px;
+  font-size: 14px;
+  font-weight: 700;
+  border-radius: var(--radius-md);
+  text-decoration: none;
+  box-shadow: var(--accent-glow);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Modal */
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(3, 7, 13, 0.82); backdrop-filter: blur(14px);
+  display: flex; align-items: center; justify-content: center; z-index: 1000;
+  opacity: 0; visibility: hidden; transition: var(--transition);
+}
+.modal-overlay.open { opacity: 1; visibility: visible; }
+
+.modal-card {
+  background: #0f172a; border: 1px solid var(--card-border); border-radius: var(--radius-lg);
+  width: 100%; max-width: 480px; padding: 28px; transition: var(--transition);
+}
+
+.modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+.modal-title { font-size: 18px; font-weight: 700; color: #ffffff !important; }
+.close-btn { background: transparent; border: none; color: var(--text-muted); font-size: 22px; cursor: pointer; }
+
+.form-group { margin-bottom: 18px; }
+.form-label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 8px; color: #f8fafc; }
+.form-control {
+  width: 100%; background-color: var(--input-bg); border: 1px solid var(--input-border);
+  border-radius: var(--radius-md); padding: 12px 16px; color: var(--text-primary); font-size: 14px; outline: none;
+}
+.modal-actions { display: flex; gap: 12px; margin-top: 24px; }
+.btn-secondary { flex: 1; background: rgba(255, 255, 255, 0.05); border: 1px solid var(--card-border); color: #fff; padding: 12px; border-radius: var(--radius-md); font-weight: 600; cursor: pointer; }
+.btn-primary { flex: 2; background: var(--accent-gradient); border: none; color: #fff; padding: 12px; border-radius: var(--radius-md); font-weight: 600; cursor: pointer; box-shadow: var(--accent-glow); }
+
+.toast-container { position: fixed; bottom: 24px; right: 24px; display: flex; flex-direction: column; gap: 10px; z-index: 2000; }
+.toast { background: #0f172a; border: 1px solid var(--card-border); border-left: 4px solid var(--accent-purple); color: #fff; padding: 14px 20px; border-radius: var(--radius-md); font-size: 14px; display: flex; align-items: center; gap: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.3); }
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // Countdown Timer Logic for Audit Mode
+  {% if is_audit_mode %}
+    let secondsLeft = {{ time_left_seconds|default(259200) }};
+
+    function startTimer() {
+      const timerElem = document.getElementById('countdownTimer');
+      if (!timerElem) return;
+
+      const update = () => {
+        if (secondsLeft <= 0) {
+          timerElem.innerText = "00:00:00";
+          return;
+        }
+
+        const hrs = Math.floor(secondsLeft / 3600);
+        const mins = Math.floor((secondsLeft % 3600) / 60);
+        const secs = secondsLeft % 60;
+
+        const hStr = String(hrs).padStart(2, '0');
+        const mStr = String(mins).padStart(2, '0');
+        const sStr = String(secs).padStart(2, '0');
+
+        timerElem.innerText = `${hStr}:${mStr}:${sStr}`;
+        secondsLeft--;
+      };
+
+      update();
+      setInterval(update, 1000);
+    }
+
+    window.addEventListener('DOMContentLoaded', startTimer);
+  {% endif %}
+
+  function openPaywallModal() {
+    const m = document.getElementById('paywallModal');
+    if (m) m.classList.add('open');
+  }
+
+  function closePaywallModal() {
+    const m = document.getElementById('paywallModal');
+    if (m) m.classList.remove('open');
+  }
+
+  // Real Database Entities Passed from Flask Backend
+  const GROUPS = {{ groups_json|safe }};
+  const TIME_SLOTS = {{ time_slots_json|safe }};
+  const scheduleStore = {{ schedule_store_json|safe }};
+
+  let currentDay = "monday";
+  let activeTargetKey = null;
+
+  function renderMatrix() {
+    const gridElem = document.getElementById('matrixGrid');
+    if (!gridElem) return;
+
+    const colCount = GROUPS.length > 0 ? GROUPS.length : 1;
+    gridElem.style.gridTemplateColumns = `150px repeat(${colCount}, minmax(200px, 1fr))`;
+
+    let html = `<div class="grid-header-cell"><span>Время / Группа</span></div>`;
+
+    GROUPS.forEach(g => {
+      html += `<div class="grid-header-cell"><span>${g.name}</span><span class="group-badge">${g.year}</span></div>`;
+    });
+
+    TIME_SLOTS.forEach(ts => {
+      html += `
+        <div class="time-cell">
+          <div class="time-range">${ts.time}</div>
+          <div class="time-label">${ts.label}</div>
+        </div>`;
+
+      GROUPS.forEach(g => {
+        const key = `${currentDay}_${ts.id}_${g.id}`;
+        const data = scheduleStore[key];
+        if (data) {
+          html += `
+            <div class="slot-cell" onclick="openModal('${key}')" id="cell_${key}">
+              <div class="slot-filled">
+                <div class="slot-subject">${data.subject}</div>
+                <div class="slot-teacher">👤 ${data.teacher}</div>
+                <div class="room-badge">${data.room}</div>
+              </div>
+            </div>`;
+        } else {
+          html += `
+            <div class="slot-cell" onclick="openModal('${key}')" id="cell_${key}">
+              <div class="slot-empty">+ Добавить</div>
+            </div>`;
+        }
+      });
+    });
+
+    gridElem.innerHTML = html;
+  }
+
+  function selectDay(day, btn) {
+    currentDay = day;
+    document.querySelectorAll('.day-btn').forEach(b => b.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+    renderMatrix();
+  }
+
+  function openModal(key) {
+    activeTargetKey = key;
+    const modal = document.getElementById('slotModal');
+    const existing = scheduleStore[key];
+    if (existing) {
+      document.getElementById('modalTitle').innerText = "Редактировать занятие";
+      const sSubj = document.getElementById('selectSubject');
+      sSubj.value = existing.subject;
+      if (sSubj.value !== existing.subject && existing.subject) {
+        let f = false;
+        for (let o of sSubj.options) {
+          if (o.value.includes(existing.subject) || existing.subject.includes(o.value)) {
+            sSubj.value = o.value; f = true; break;
+          }
+        }
+        if (!f) sSubj.add(new Option(existing.subject, existing.subject, true, true));
+      }
+
+      const sTeach = document.getElementById('selectTeacher');
+      sTeach.value = existing.teacher;
+      if (sTeach.value !== existing.teacher && existing.teacher) {
+        let f = false;
+        for (let o of sTeach.options) {
+          if (o.value.includes(existing.teacher) || existing.teacher.includes(o.value)) {
+            sTeach.value = o.value; f = true; break;
+          }
+        }
+        if (!f) sTeach.add(new Option(existing.teacher, existing.teacher, true, true));
+      }
+
+      const sRoom = document.getElementById('selectRoom');
+      sRoom.value = existing.room;
+      if (sRoom.value !== existing.room && existing.room) {
+        let f = false;
+        for (let o of sRoom.options) {
+          if (o.value.includes(existing.room) || existing.room.includes(o.value)) {
+            sRoom.value = o.value; f = true; break;
+          }
+        }
+        if (!f) sRoom.add(new Option(existing.room, existing.room, true, true));
+      }
+    } else {
+      document.getElementById('modalTitle').innerText = "Назначить занятие";
+      document.getElementById('slotForm').reset();
+    }
+    modal.classList.add('open');
+  }
+
+  function closeModal() {
+    const modal = document.getElementById('slotModal');
+    if (modal) modal.classList.remove('open');
+    activeTargetKey = null;
+  }
+
+  function showToast(msg) {
+    const container = document.getElementById('toastContainer');
+    if (!container) return;
+    const toast = document.createElement('div');
+    toast.className = 'toast';
+    toast.innerText = msg;
+    container.appendChild(toast);
+    setTimeout(() => {
+      toast.style.opacity = '0';
+      setTimeout(() => toast.remove(), 300);
+    }, 3000);
+  }
+
+  function saveSlot(e) {
+    e.preventDefault();
+    if (!activeTargetKey) return;
+
+    const subject = document.getElementById('selectSubject').value;
+    const teacher = document.getElementById('selectTeacher').value;
+    const room = document.getElementById('selectRoom').value;
+
+    scheduleStore[activeTargetKey] = { subject, teacher, room };
+    closeModal();
+    renderMatrix();
+    showToast("Занятие успешно сохранено!");
+
+    // Asynchronously save to server API
+    fetch('/api/schedule/slot/save', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        key: activeTargetKey,
+        subject: subject,
+        teacher: teacher,
+        room: room,
+        day_name: currentDay
+      })
+    }).then(r => r.json()).catch(err => console.log('Slot save notice:', err));
+  }
+
+  window.addEventListener('DOMContentLoaded', renderMatrix);
+</script>
+{% endblock %}

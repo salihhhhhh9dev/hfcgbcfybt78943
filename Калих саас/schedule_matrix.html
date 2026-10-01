@@ -1,0 +1,774 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Матрица Расписания — Лицей SaaS</title>
+  <!-- Google Fonts: Inter & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+  <style>
+    /* ==========================================
+       KALIX B2B DESIGN SYSTEM
+       ========================================== */
+    :root {
+      --bg-dark: #07090e;
+      --panel-bg: rgba(15, 23, 42, 0.75);
+      --panel-border: rgba(255, 255, 255, 0.08);
+      --panel-hover: rgba(139, 92, 246, 0.4);
+
+      --text-primary: #f8fafc;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+
+      --accent-purple: #8b5cf6;
+      --accent-blue: #3b82f6;
+      --accent-cyan: #06b6d4;
+      --accent-gradient: linear-gradient(135deg, #8b5cf6 0%, #3b82f6 100%);
+      --accent-glow: 0 0 24px rgba(139, 92, 246, 0.4);
+
+      --conflict-red: #ff3366;
+      --conflict-orange: #ff9900;
+      --conflict-glow: 0 0 30px rgba(255, 51, 102, 0.6);
+
+      --input-bg: #0f172a;
+      --input-border: #1e293b;
+
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 16px;
+
+      --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background-color: var(--bg-dark);
+      color: var(--text-primary);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      padding: 28px;
+      background-image: 
+        radial-gradient(circle at 12% 12%, rgba(139, 92, 246, 0.09) 0%, transparent 45%),
+        radial-gradient(circle at 88% 88%, rgba(6, 182, 212, 0.09) 0%, transparent 45%);
+      background-attachment: fixed;
+    }
+
+    /* ==========================================
+       HEADER & NAVIGATION
+       ========================================== */
+    .header {
+      max-width: 1400px;
+      margin: 0 auto 28px auto;
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid var(--panel-border);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: var(--radius-md);
+      background: var(--accent-gradient);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: var(--accent-glow);
+    }
+
+    .brand-icon svg { width: 22px; height: 22px; fill: #ffffff; }
+
+    .brand-text h1 { font-size: 20px; font-weight: 700; letter-spacing: -0.02em; }
+    .brand-text p { font-size: 13px; color: var(--text-secondary); }
+
+    .day-selector {
+      display: flex;
+      background: rgba(15, 23, 42, 0.85);
+      padding: 4px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--panel-border);
+      gap: 4px;
+    }
+
+    .day-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-secondary);
+      padding: 10px 18px;
+      font-size: 13px;
+      font-weight: 600;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: var(--transition);
+    }
+
+    .day-btn:hover { color: var(--text-primary); background: rgba(255, 255, 255, 0.05); }
+    .day-btn.active { background: var(--accent-gradient); color: #ffffff; box-shadow: var(--accent-glow); }
+
+    .status-badge {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--accent-cyan);
+      background: rgba(6, 182, 212, 0.12);
+      border: 1px solid rgba(6, 182, 212, 0.3);
+      padding: 6px 14px;
+      border-radius: 20px;
+    }
+
+    .status-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--accent-cyan);
+      box-shadow: 0 0 8px var(--accent-cyan);
+    }
+
+    /* ==========================================
+       MATRIX GRID CONTAINER (CSS GRID)
+       ========================================== */
+    .matrix-wrapper {
+      max-width: 1400px;
+      margin: 0 auto;
+      width: 100%;
+      flex: 1;
+      background: var(--panel-bg);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--panel-border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+    }
+
+    .matrix-grid {
+      display: grid;
+      grid-template-columns: 140px repeat(3, 1fr); /* 1 Time Column + 3 Group Columns */
+      width: 100%;
+    }
+
+    .grid-header-cell {
+      background: rgba(11, 15, 25, 0.95);
+      padding: 18px 20px;
+      font-size: 13px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--text-secondary);
+      border-bottom: 1px solid var(--panel-border);
+      border-right: 1px solid var(--panel-border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .group-badge {
+      background: rgba(139, 92, 246, 0.15);
+      color: var(--accent-purple);
+      border: 1px solid rgba(139, 92, 246, 0.3);
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-weight: 600;
+    }
+
+    .time-cell {
+      background: rgba(8, 12, 20, 0.85);
+      padding: 20px 16px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      border-bottom: 1px solid var(--panel-border);
+      border-right: 1px solid var(--panel-border);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .slot-cell {
+      border-bottom: 1px solid var(--panel-border);
+      border-right: 1px solid var(--panel-border);
+      padding: 12px;
+      min-height: 110px;
+      transition: var(--transition);
+      position: relative;
+      background: rgba(15, 23, 42, 0.3);
+      cursor: pointer;
+    }
+
+    .slot-cell:hover {
+      background: rgba(139, 92, 246, 0.06);
+      border-color: var(--panel-hover);
+    }
+
+    /* Empty Cell */
+    .slot-empty {
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      color: var(--text-muted);
+      font-size: 13px;
+      font-weight: 500;
+      border: 1px dashed rgba(255, 255, 255, 0.08);
+      border-radius: var(--radius-md);
+      transition: var(--transition);
+    }
+
+    .slot-cell:hover .slot-empty {
+      border-color: var(--accent-purple);
+      color: var(--accent-purple);
+      background: rgba(139, 92, 246, 0.1);
+    }
+
+    /* Filled Cell Card */
+    .slot-filled {
+      height: 100%;
+      background: linear-gradient(135deg, rgba(30, 41, 59, 0.9) 0%, rgba(15, 23, 42, 0.95) 100%);
+      border: 1px solid rgba(139, 92, 246, 0.3);
+      border-left: 4px solid var(--accent-purple);
+      border-radius: var(--radius-md);
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      transition: var(--transition);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+
+    .slot-filled:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(139, 92, 246, 0.25);
+      border-color: var(--accent-purple);
+    }
+
+    .slot-subject {
+      font-size: 13px;
+      font-weight: 700;
+      color: #ffffff;
+      margin-bottom: 6px;
+      line-height: 1.35;
+    }
+
+    .slot-meta {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    .room-badge {
+      font-size: 11px;
+      font-weight: 600;
+      background: rgba(6, 182, 212, 0.15);
+      color: var(--accent-cyan);
+      border: 1px solid rgba(6, 182, 212, 0.3);
+      padding: 2px 8px;
+      border-radius: 4px;
+      width: fit-content;
+      margin-top: 4px;
+    }
+
+    /* CONFLICT RED NEON ERROR STATE */
+    .slot-cell.conflict-error {
+      animation: pulseConflict 1.5s infinite alternate;
+    }
+
+    .slot-cell.conflict-error .slot-filled {
+      border: 2px solid var(--conflict-red) !important;
+      border-left: 6px solid var(--conflict-red) !important;
+      box-shadow: var(--conflict-glow) !important;
+      background: linear-gradient(135deg, rgba(255, 51, 102, 0.2) 0%, rgba(15, 23, 42, 0.95) 100%) !important;
+    }
+
+    @keyframes pulseConflict {
+      0% { box-shadow: inset 0 0 10px rgba(255, 51, 102, 0.3); }
+      100% { box-shadow: inset 0 0 30px rgba(255, 51, 102, 0.7); }
+    }
+
+    /* ==========================================
+       MODAL WINDOW OVERLAY
+       ========================================== */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(3, 7, 13, 0.82);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      opacity: 0;
+      visibility: hidden;
+      transition: var(--transition);
+      padding: 20px;
+    }
+
+    .modal-overlay.open { opacity: 1; visibility: visible; }
+
+    .modal-card {
+      background: #0f172a;
+      border: 1px solid var(--panel-border);
+      border-radius: var(--radius-lg);
+      width: 100%;
+      max-width: 480px;
+      padding: 28px;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8);
+      transform: scale(0.95);
+      transition: var(--transition);
+    }
+
+    .modal-overlay.open .modal-card { transform: scale(1); }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    .modal-title { font-size: 18px; font-weight: 700; color: #ffffff; }
+
+    .close-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-size: 22px;
+      cursor: pointer;
+      padding: 4px;
+      border-radius: 6px;
+      transition: var(--transition);
+    }
+
+    .close-btn:hover { color: #ffffff; background: rgba(255, 255, 255, 0.1); }
+
+    .form-group { margin-bottom: 18px; }
+    .form-label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 8px; }
+
+    .form-control {
+      width: 100%;
+      background-color: var(--input-bg);
+      border: 1px solid var(--input-border);
+      border-radius: var(--radius-md);
+      padding: 12px 16px;
+      color: var(--text-primary);
+      font-size: 14px;
+      outline: none;
+      transition: var(--transition);
+    }
+
+    .form-control:focus {
+      border-color: var(--accent-purple);
+      box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.2);
+    }
+
+    .modal-actions {
+      display: flex;
+      gap: 12px;
+      margin-top: 24px;
+    }
+
+    .btn-secondary {
+      flex: 1;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--panel-border);
+      color: var(--text-primary);
+      padding: 12px;
+      border-radius: var(--radius-md);
+      font-weight: 600;
+      cursor: pointer;
+      transition: var(--transition);
+    }
+
+    .btn-primary {
+      flex: 2;
+      background: var(--accent-gradient);
+      border: none;
+      color: #ffffff;
+      padding: 12px;
+      border-radius: var(--radius-md);
+      font-weight: 600;
+      cursor: pointer;
+      box-shadow: var(--accent-glow);
+      transition: var(--transition);
+    }
+
+    .btn-primary:hover { opacity: 0.95; transform: translateY(-1px); }
+
+    /* ==========================================
+       TOAST NOTIFICATION
+       ========================================== */
+    .toast-container {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      z-index: 2000;
+    }
+
+    .toast {
+      background: #0f172a;
+      border: 1px solid var(--panel-border);
+      border-left: 4px solid var(--accent-purple);
+      color: #ffffff;
+      padding: 14px 20px;
+      border-radius: var(--radius-md);
+      font-size: 14px;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      box-shadow: 0 15px 30px rgba(0,0,0,0.6);
+      animation: slideIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .toast.toast-error {
+      border-color: var(--conflict-red);
+      border-left-color: var(--conflict-red);
+      box-shadow: var(--conflict-glow);
+    }
+
+    @keyframes slideIn {
+      from { transform: translateX(100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Header Section -->
+  <header class="header">
+    <div class="brand">
+      <div class="brand-icon">
+        <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      </div>
+      <div class="brand-text">
+        <h1>Матрица Расписания Лицея</h1>
+        <p>B2B SaaS Генератор • Мультиарендный режим</p>
+      </div>
+    </div>
+
+    <!-- Day Selector Buttons -->
+    <div class="day-selector">
+      <button class="day-btn active" onclick="selectDay('monday', this)">Пн</button>
+      <button class="day-btn" onclick="selectDay('tuesday', this)">Вт</button>
+      <button class="day-btn" onclick="selectDay('wednesday', this)">Ср</button>
+      <button class="day-btn" onclick="selectDay('thursday', this)">Чт</button>
+      <button class="day-btn" onclick="selectDay('friday', this)">Пт</button>
+      <button class="day-btn" onclick="selectDay('saturday', this)">Сб</button>
+    </div>
+
+    <!-- Conflict Detector Active Badge -->
+    <div class="status-badge">
+      <span class="status-dot"></span>
+      Детектор конфликтов активен
+    </div>
+  </header>
+
+  <!-- Schedule Matrix Grid -->
+  <main class="matrix-wrapper">
+    <div class="matrix-grid" id="matrixGrid">
+      <!-- Grid Cells generated dynamically by Vanilla JS -->
+    </div>
+  </main>
+
+  <!-- Modal Window Overlay -->
+  <div class="modal-overlay" id="slotModal">
+    <div class="modal-card" id="modalCard">
+      <div class="modal-header">
+        <h3 class="modal-title" id="modalTitle">Назначить занятие</h3>
+        <button class="close-btn" onclick="closeModal()">&times;</button>
+      </div>
+
+      <form id="slotForm" onsubmit="saveSlot(event)">
+        
+        <!-- Subject Selection -->
+        <div class="form-group">
+          <label class="form-label" for="selectSubject">Предмет</label>
+          <select id="selectSubject" class="form-control" required>
+            <option value="">Выберите предмет...</option>
+            <option value="Основы программирования (4 кр.)">Основы программирования (4 кр.)</option>
+            <option value="Основы web дизайна (2 кр.)">Основы web дизайна (2 кр.)</option>
+            <option value="Технология программирования (2.6 кр.)">Технология программирования (2.6 кр.)</option>
+          </select>
+        </div>
+
+        <!-- Teacher Selection -->
+        <div class="form-group">
+          <label class="form-label" for="selectTeacher">Преподаватель</label>
+          <select id="selectTeacher" class="form-control" required>
+            <option value="">Выберите преподавателя...</option>
+            <option value="Иванов И.И.">Иванов И.И.</option>
+            <option value="Смирнов А.А.">Смирнов А.А.</option>
+          </select>
+        </div>
+
+        <!-- Room Selection -->
+        <div class="form-group">
+          <label class="form-label" for="selectRoom">Аудитория</label>
+          <select id="selectRoom" class="form-control" required>
+            <option value="">Выберите аудиторию...</option>
+            <option value="Каб. 101">Каб. 101</option>
+            <option value="Каб. 102 (Компьютерный)">Каб. 102 (Компьютерный)</option>
+          </select>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="modal-actions">
+          <button type="button" class="btn-secondary" onclick="closeModal()">Отмена</button>
+          <button type="submit" class="btn-primary">Сохранить</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Toast Container -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- Vanilla JS Interactive Matrix Logic -->
+  <script>
+    // State Architecture
+    const GROUPS = [
+      { id: "group_1", name: "ИТ-21", year: "2 курс" },
+      { id: "group_2", name: "ПР-22", year: "2 курс" },
+      { id: "group_3", name: "ДЗ-23", year: "3 курс" }
+    ];
+
+    const TIME_SLOTS = [
+      { id: "slot_1", time: "08:00 - 09:30", label: "1 пара" },
+      { id: "slot_2", time: "09:40 - 11:10", label: "2 пара" },
+      { id: "slot_3", time: "11:20 - 12:50", label: "3 пара" }
+    ];
+
+    let currentDay = "monday";
+    
+    // Schedule Store keyed by `day_slotId_groupId`
+    const scheduleStore = {
+      "monday_slot_1_group_1": {
+        subject: "Основы программирования (4 кр.)",
+        teacher: "Иванов И.И.",
+        room: "Каб. 102 (Компьютерный)"
+      },
+      "monday_slot_2_group_2": {
+        subject: "Основы web дизайна (2 кр.)",
+        teacher: "Смирнов А.А.",
+        room: "Каб. 101"
+      }
+    };
+
+    let activeTargetKey = null;
+
+    // Render Matrix Grid Function
+    function renderMatrix() {
+      const gridElem = document.getElementById('matrixGrid');
+      let html = '';
+
+      // 1. Top-Left Header Cell
+      html += `<div class="grid-header-cell">Время / Группа</div>`;
+
+      // 2. Group Column Headers (X-Axis)
+      GROUPS.forEach(g => {
+        html += `
+          <div class="grid-header-cell">
+            <span>${g.name}</span>
+            <span class="group-badge">${g.year}</span>
+          </div>
+        `;
+      });
+
+      // 3. Time Slots & Cells (Y-Axis)
+      TIME_SLOTS.forEach(ts => {
+        html += `
+          <div class="time-cell">
+            <div>${ts.time}</div>
+            <div style="font-size:11px; color:var(--text-muted);">${ts.label}</div>
+          </div>
+        `;
+
+        GROUPS.forEach(g => {
+          const key = `${currentDay}_${ts.id}_${g.id}`;
+          const data = scheduleStore[key];
+
+          if (data) {
+            html += `
+              <div class="slot-cell" onclick="openModal('${key}')" id="cell_${key}">
+                <div class="slot-filled">
+                  <div class="slot-subject">${data.subject}</div>
+                  <div class="slot-meta">
+                    <div>👤 ${data.teacher}</div>
+                    <div class="room-badge">${data.room}</div>
+                  </div>
+                </div>
+              </div>
+            `;
+          } else {
+            html += `
+              <div class="slot-cell" onclick="openModal('${key}')" id="cell_${key}">
+                <div class="slot-empty">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                  Добавить
+                </div>
+              </div>
+            `;
+          }
+        });
+      });
+
+      gridElem.innerHTML = html;
+    }
+
+    // Day Selection Handler
+    function selectDay(day, btnElem) {
+      currentDay = day;
+      document.querySelectorAll('.day-btn').forEach(b => b.classList.remove('active'));
+      btnElem.classList.add('active');
+      renderMatrix();
+      showToast(`Переключено на ${getDayName(day)}`);
+    }
+
+    function getDayName(dayKey) {
+      const names = {
+        monday: "Понедельник", tuesday: "Вторник", wednesday: "Среда",
+        thursday: "Четверг", friday: "Пятница", saturday: "Суббота"
+      };
+      return names[dayKey] || dayKey;
+    }
+
+    // Modal Control
+    function openModal(key) {
+      activeTargetKey = key;
+      const modal = document.getElementById('slotModal');
+
+      const existingData = scheduleStore[key];
+      const [, slotIdP1, slotIdP2, groupIdP1, groupIdP2] = key.split('_');
+      const slotId = `${slotIdP1}_${slotIdP2}`;
+      const timeObj = TIME_SLOTS.find(t => t.id === slotId);
+      const groupObj = GROUPS.find(g => key.includes(g.id));
+
+      document.getElementById('modalTitle').textContent = existingData 
+        ? `Редактировать: ${groupObj?.name || ''} (${timeObj?.time || ''})`
+        : `Назначить: ${groupObj?.name || ''} (${timeObj?.time || ''})`;
+
+      if (existingData) {
+        document.getElementById('selectSubject').value = existingData.subject;
+        document.getElementById('selectTeacher').value = existingData.teacher;
+        document.getElementById('selectRoom').value = existingData.room;
+      } else {
+        document.getElementById('slotForm').reset();
+      }
+
+      modal.classList.add('open');
+    }
+
+    function closeModal() {
+      document.getElementById('slotModal').classList.remove('open');
+      activeTargetKey = null;
+    }
+
+    // Save Slot & Conflict Detector
+    function saveSlot(event) {
+      event.preventDefault();
+      if (!activeTargetKey) return;
+
+      const subject = document.getElementById('selectSubject').value;
+      const teacher = document.getElementById('selectTeacher').value;
+      const room = document.getElementById('selectRoom').value;
+
+      const [day, slotP1, slotP2] = activeTargetKey.split('_');
+      const slotId = `${slotP1}_${slotP2}`;
+
+      // -----------------------------------------------------------------
+      // SIMULATE CONFLICT DETECTOR
+      // Check if the selected teacher is ALREADY assigned to another cell
+      // in the SAME time slot row for the CURRENT day!
+      // -----------------------------------------------------------------
+      let conflictCellKey = null;
+
+      Object.keys(scheduleStore).forEach(k => {
+        if (k !== activeTargetKey) {
+          const parts = k.split('_');
+          const kDay = parts[0];
+          const kSlotId = `${parts[1]}_${parts[2]}`;
+
+          if (kDay === day && kSlotId === slotId) {
+            if (scheduleStore[k].teacher === teacher) {
+              conflictCellKey = k;
+            }
+          }
+        }
+      });
+
+      if (conflictCellKey) {
+        // Prevent saving and close the modal
+        closeModal();
+
+        // Trigger strong visual error state on the conflicting cell
+        const conflictingCellElem = document.getElementById(`cell_${conflictCellKey}`);
+        if (conflictingCellElem) {
+          conflictingCellElem.classList.add('conflict-error');
+          setTimeout(() => conflictingCellElem.classList.remove('conflict-error'), 4500);
+        }
+
+        // Trigger Toast Notification
+        showToast(`Конфликт: Преподаватель уже занят`, true);
+        return;
+      }
+
+      // Save valid slot
+      scheduleStore[activeTargetKey] = { subject, teacher, room };
+      closeModal();
+      renderMatrix();
+      showToast(`Занятие "${subject}" успешно сохранено!`);
+    }
+
+    // Toast Notification Generator
+    function showToast(message, isError = false) {
+      const container = document.getElementById('toastContainer');
+      const toast = document.createElement('div');
+      toast.className = `toast ${isError ? 'toast-error' : ''}`;
+      
+      const icon = isError 
+        ? `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ff3366" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>`
+        : `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>`;
+
+      toast.innerHTML = `${icon} <span>${message}</span>`;
+      container.appendChild(toast);
+
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateX(100%)';
+        setTimeout(() => toast.remove(), 300);
+      }, 4000);
+    }
+
+    // Init
+    window.addEventListener('DOMContentLoaded', renderMatrix);
+  </script>
+</body>
+</html>
